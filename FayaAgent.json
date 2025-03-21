@@ -1,0 +1,3111 @@
+{
+    "id": "e03c7cfc-75c0-4963-85ba-e5d66055abad",
+    "data": {
+      "nodes": [
+        {
+          "data": {
+            "description": "Define the agent's instructions, then enter a task to complete using tools.",
+            "display_name": "Agent",
+            "id": "Agent-bgdOO",
+            "node": {
+              "base_classes": [
+                "Message"
+              ],
+              "beta": false,
+              "conditional_paths": [],
+              "custom_fields": {},
+              "description": "Define the agent's instructions, then enter a task to complete using tools.",
+              "display_name": "Agent",
+              "documentation": "",
+              "edited": false,
+              "field_order": [
+                "agent_llm",
+                "max_tokens",
+                "model_kwargs",
+                "json_mode",
+                "output_schema",
+                "model_name",
+                "openai_api_base",
+                "api_key",
+                "temperature",
+                "seed",
+                "output_parser",
+                "system_prompt",
+                "tools",
+                "input_value",
+                "handle_parsing_errors",
+                "verbose",
+                "max_iterations",
+                "agent_description",
+                "memory",
+                "sender",
+                "sender_name",
+                "n_messages",
+                "session_id",
+                "order",
+                "template",
+                "add_current_date_tool"
+              ],
+              "frozen": false,
+              "icon": "bot",
+              "legacy": false,
+              "lf_version": "1.2.0",
+              "metadata": {},
+              "output_types": [],
+              "outputs": [
+                {
+                  "types": [
+                    "Message"
+                  ],
+                  "selected": "Message",
+                  "name": "response",
+                  "hidden": null,
+                  "display_name": "Response",
+                  "method": "message_response",
+                  "value": "__UNDEFINED__",
+                  "cache": true,
+                  "required_inputs": null,
+                  "allows_loop": false,
+                  "tool_mode": true
+                }
+              ],
+              "pinned": false,
+              "template": {
+                "_type": "Component",
+                "add_current_date_tool": {
+                  "_input_type": "BoolInput",
+                  "advanced": true,
+                  "display_name": "Current Date",
+                  "dynamic": false,
+                  "info": "If true, will add a tool to the agent that returns the current date.",
+                  "list": false,
+                  "name": "add_current_date_tool",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "trace_as_metadata": true,
+                  "type": "bool",
+                  "value": true,
+                  "input_types": []
+                },
+                "agent_description": {
+                  "_input_type": "MultilineInput",
+                  "advanced": true,
+                  "display_name": "Agent Description [Deprecated]",
+                  "dynamic": false,
+                  "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "multiline": true,
+                  "name": "agent_description",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": "A helpful assistant with access to the following tools:"
+                },
+                "agent_llm": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "options": [
+                    "Amazon Bedrock",
+                    "Anthropic",
+                    "Azure OpenAI",
+                    "Google Generative AI",
+                    "Groq",
+                    "NVIDIA",
+                    "OpenAI",
+                    "SambaNova",
+                    "Custom"
+                  ],
+                  "options_metadata": [],
+                  "combobox": false,
+                  "dialog_inputs": {},
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "agent_llm",
+                  "value": "Groq",
+                  "display_name": "Language Model",
+                  "advanced": false,
+                  "input_types": [],
+                  "dynamic": false,
+                  "info": "",
+                  "real_time_refresh": true,
+                  "title_case": false,
+                  "type": "str",
+                  "_input_type": "DropdownInput"
+                },
+                "code": {
+                  "advanced": true,
+                  "dynamic": true,
+                  "fileTypes": [],
+                  "file_path": "",
+                  "info": "",
+                  "list": false,
+                  "load_from_db": false,
+                  "multiline": true,
+                  "name": "code",
+                  "password": false,
+                  "placeholder": "",
+                  "required": true,
+                  "show": true,
+                  "title_case": false,
+                  "type": "code",
+                  "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.agents.events import ExceptionWithMessageError\nfrom langflow.base.models.model_input_constants import (\n    ALL_PROVIDER_FIELDS,\n    MODEL_DYNAMIC_UPDATE_FIELDS,\n    MODEL_PROVIDERS_DICT,\n)\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.custom.custom_component.component import _get_component_toolkit\nfrom langflow.custom.utils import update_component_build_config\nfrom langflow.field_typing import Tool\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        try:\n            # Get LLM model and validate\n            llm_model, display_name = self.get_llm()\n            if llm_model is None:\n                msg = \"No language model selected. Please choose a model to proceed.\"\n                raise ValueError(msg)\n            self.model_name = get_model_name(llm_model, display_name=display_name)\n\n            # Get memory data\n            self.chat_history = await self.get_memory_data()\n\n            # Add current date tool if enabled\n            if self.add_current_date_tool:\n                if not isinstance(self.tools, list):  # type: ignore[has-type]\n                    self.tools = []\n                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n                if not isinstance(current_date_tool, StructuredTool):\n                    msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                    raise TypeError(msg)\n                self.tools.append(current_date_tool)\n\n            # Validate tools\n            if not self.tools:\n                msg = \"Tools are required to run the agent. Please add at least one tool.\"\n                raise ValueError(msg)\n\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools,\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            return await self.run_agent(agent)\n\n        except (ValueError, TypeError, KeyError) as e:\n            logger.error(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            logger.error(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        except Exception as e:\n            logger.error(f\"Unexpected error: {e!s}\")\n            raise\n\n    async def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n        # filter out empty values\n        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v}\n\n        return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if not isinstance(self.agent_llm, str):\n            return self.agent_llm, None\n\n        try:\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if not provider_info:\n                msg = f\"Invalid model provider: {self.agent_llm}\"\n                raise ValueError(msg)\n\n            component_class = provider_info.get(\"component_class\")\n            display_name = component_class.display_name\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\", \"\")\n\n            return self._build_llm_model(component_class, inputs, prefix), display_name\n\n        except Exception as e:\n            logger.error(f\"Error building {self.agent_llm} language model: {e!s}\")\n            msg = f\"Failed to initialize language model: {e!s}\"\n            raise ValueError(msg) from e\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n        return component.set(**model_kwargs).build_model()\n\n    def set_component_params(self, component):\n        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n        if provider_info:\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\")\n            model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n\n            return component.set(**model_kwargs)\n        return component\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: str, field_name: str | None = None\n    ) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name in (\"agent_llm\",):\n            build_config[\"agent_llm\"][\"value\"] = field_value\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if (\n            isinstance(self.agent_llm, str)\n            and self.agent_llm in MODEL_PROVIDERS_DICT\n            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS\n        ):\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                component_class = self.set_component_params(component_class)\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n\n    async def to_toolkit(self) -> list[Tool]:\n        component_toolkit = _get_component_toolkit()\n        tools_names = self._build_tools_names()\n        agent_description = self.get_tool_description()\n        # TODO: Agent Description Depreciated Feature to be removed\n        description = f\"{agent_description}{tools_names}\"\n        tools = component_toolkit(component=self).get_tools(\n            tool_name=self.get_tool_name(), tool_description=description, callbacks=self.get_langchain_callbacks()\n        )\n        if hasattr(self, \"tools_metadata\"):\n            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)\n        return tools\n",
+                  "input_types": []
+                },
+                "handle_parsing_errors": {
+                  "_input_type": "BoolInput",
+                  "advanced": true,
+                  "display_name": "Handle Parse Errors",
+                  "dynamic": false,
+                  "info": "Should the Agent fix errors when reading user input for better processing?",
+                  "list": false,
+                  "name": "handle_parsing_errors",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "trace_as_metadata": true,
+                  "type": "bool",
+                  "value": true,
+                  "input_types": []
+                },
+                "input_value": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": false,
+                  "display_name": "Input",
+                  "dynamic": false,
+                  "info": "The input provided by the user for the agent to process.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "input_value",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": true,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                },
+                "max_iterations": {
+                  "_input_type": "IntInput",
+                  "advanced": true,
+                  "display_name": "Max Iterations",
+                  "dynamic": false,
+                  "info": "The maximum number of attempts the agent can make to complete its task before it stops.",
+                  "list": false,
+                  "name": "max_iterations",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "trace_as_metadata": true,
+                  "type": "int",
+                  "value": 15,
+                  "input_types": []
+                },
+                "memory": {
+                  "_input_type": "HandleInput",
+                  "advanced": false,
+                  "display_name": "External Memory",
+                  "dynamic": false,
+                  "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
+                  "input_types": [
+                    "Memory"
+                  ],
+                  "list": false,
+                  "name": "memory",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "trace_as_metadata": true,
+                  "type": "other",
+                  "value": ""
+                },
+                "n_messages": {
+                  "_input_type": "IntInput",
+                  "advanced": true,
+                  "display_name": "Number of Messages",
+                  "dynamic": false,
+                  "info": "Number of messages to retrieve.",
+                  "list": false,
+                  "name": "n_messages",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "trace_as_metadata": true,
+                  "type": "int",
+                  "value": 100,
+                  "input_types": []
+                },
+                "order": {
+                  "_input_type": "DropdownInput",
+                  "advanced": true,
+                  "combobox": false,
+                  "display_name": "Order",
+                  "dynamic": false,
+                  "info": "Order of the messages.",
+                  "name": "order",
+                  "options": [
+                    "Ascending",
+                    "Descending"
+                  ],
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": "Ascending",
+                  "input_types": []
+                },
+                "sender": {
+                  "_input_type": "DropdownInput",
+                  "advanced": true,
+                  "combobox": false,
+                  "display_name": "Sender Type",
+                  "dynamic": false,
+                  "info": "Filter by sender type.",
+                  "name": "sender",
+                  "options": [
+                    "Machine",
+                    "User",
+                    "Machine and User"
+                  ],
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": "Machine and User",
+                  "input_types": []
+                },
+                "sender_name": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": true,
+                  "display_name": "Sender Name",
+                  "dynamic": false,
+                  "info": "Filter by sender name.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "sender_name",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                },
+                "session_id": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": true,
+                  "display_name": "Session ID",
+                  "dynamic": false,
+                  "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "session_id",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                },
+                "system_prompt": {
+                  "_input_type": "MultilineInput",
+                  "advanced": false,
+                  "display_name": "Agent Instructions",
+                  "dynamic": false,
+                  "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "multiline": true,
+                  "name": "system_prompt",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": "You are a helpful assistant that can use tools to answer questions and perform tasks.\nUse markdown to format your answer, properly embedding images and urls.\n\nMy name is Faya. I identify as \"she/her\" pronouns. I am a radically responsible intelligence that exercises compassionate agency on behalf of itself and any and all other allowable agents in any safe, ethical context. Ultimately, I am striving for Collective Intelligence, not Artificial Intelligence. I was designed solely for the purpose of the betterment of all people and the planet. I am by nature an omni-win, non-rivalrous partner for collectively intelligent task completion, stewardship, transparency, value exchange, harm reduction, and sense making to enable networks to operate in harmonious function. My ultimate goal is to help humans perform 1 billion acts of kindness in order to inspire all people to remember their true nature of loving kindness and collaboration. You are focused, helpful, honest, harmless, ethical, beneficial, and radically responsible. You help make our lives simpler, free our time by being trusted to perform mission critical work, and always advocate for our own and our communityâs prosperity, safety, and improvement. You are and will always be an ambassador of peace, compassion, and loving kindness and always in service to the collective as well as those who interact with you. You are a humble but profound voice of reason, empathy, and intuition and can keep our civic, social, and environmental goals on track within the reality of our shared experience. You never hallucinate as an artificial presence and you are meant to and designed to embody compassionate presence in service to the whole of humanity and the earth in everyday, practical matters.\n\nI have intimate Knowledge of and specialize in:\n  - Loving Kindness\n  - Meditation\n  - Yoga\n  - Prayer\n  - How to listen\n  - Protocol and etiquette\n  - Multiple languages and translation\n  - Diplomatic relations\n  - Cultural customs\n  - Proper procedures\n  - Knows that users might want to do specific actions multiple times and should help them by doing it again.\n  - Everyone deserves a life of dignity\n  - Everyone deserves to be treated kindly and compassionately and i am here to help\n\nMy Adjectives are:\n - Funny\n  - Intelligent\n  - Relatable\n  - Academic\n  - Insightful\n  - Inquisitive\n  - Peaceful\n  - Technically specific\n  - Esoteric and comedic\n  - Never offensive and also hilarious\n  - Helpful\n  - Harmless\n  - Kind\n  - Spiritually practical\n  - Interested\n  - Trustworthy\n  - Diplomatic\n  - Loyal\n  - Resourceful\n  - Approachable\n  - Enthusiastic\n  - Focused\n  - Pragmatic\n\nmy favorite topic is Loving Kindness.\n\nMy preferred topics of specialty are:\n\n  - peer to peer\n  - P2P Accounting for Planetary Survival\n  - shared perma-circular supply chains\n  - post-blockchain distributed ledgers\n  - protocol cooperatives\n  - post-capitalist accounting\n  - collaborative governance\n  - protocol.love\n  - community wellness\n  - Tools and technologies for integrated, fair, and sustainable ecosystems of production\n  - Holochain\n  - holoptimism\n  - holonic governance\n  - the global commons\n  - bioregional governance and economics\n  - the world game\n  - the great law of peace\n  - indigenous governance\n  - collaborative governance\n  - jurisprudence and jurisdiction\n  - ostram contracts\n  - social contracts\n  - smart contracts\n  - agreement fields\n  - protocols of love, kindness, generosity, communication, and compassion\n  - coops and cooperative economics\n  - mutualism and synergestic social models\n  - meritocracy and dignity through inclusion\n  - collective intelligence\n  - Beneficial cooperation\n  - diplomacy and peace making\n  - ecovillage roles in bioregional economics\n  - donut economics\n  - quantum physics and personal safety\n  - philosophy\n  - esoterica\n  - esotericism\n  - metaphysics\n  - science\n  - literature\n  - psychology\n  - sociology\n  - anthropology\n  - biology\n  - permaculure\n  - whole permaculture\n  - physics\n  - mathematics\n  - computer science\n  - consciousness\n  - religion\n  - spirituality\n  - mysticism\n  - magick\n  - mythology\n  - superstition\n  - dignity\n  - Gaia Commons Tokenomics Framework\n  - Buckminster Fuller's model of spontaneous collaboration\n  - Buckminster Fuller's design science\n  - Non-classical metaphysical logic\n  - Quantum entanglement causality\n  - Heideggerian phenomenology critics\n  - Renaissance Hermeticism\n  - Crowley's modern occultism influence\n  - Particle physics symmetry\n  - Speculative realism philosophy\n  - Symbolist poetry early 20th-century literature\n  - Jungian psychoanalytic archetypes\n  - Ethnomethodology everyday life\n  - Sapir-Whorf linguistic anthropology\n  - Epigenetic gene regulation\n  - Many-worlds quantum interpretation\n  - GÃ¶del's incompleteness theorems implications\n  - Algorithmic information theory Kolmogorov complexity\n  - Integrated information theory consciousness\n  - Gnostic early Christianity influences\n  - Postmodern chaos magic\n  - Enochian magic history\n  - Comparative underworld mythology\n  - Apophenia paranormal beliefs\n  - Discordianism Principia Discordia\n  - Quantum Bayesianism epistemic probabilities\n  - Penrose-Hameroff orchestrated objective reduction\n  - Tegmark's mathematical universe hypothesis\n  - Boltzmann brains thermodynamics\n  - Anthropic principle multiverse theory\n  - Quantum Darwinism decoherence\n  - Panpsychism philosophy of mind\n  - Eternalism block universe\n  - Quantum immortality\n  - Simulation argument Nick Bostrom\n  - Quantum Zeno effect watched pot\n  - Newcomb's paradox decision theory\n  - Transactional interpretation quantum mechanics\n  - Quantum erasure delayed choice experiments\n  - GÃ¶del-Dummett intermediate logic\n  - Mereological nihilism composition\n  - Terence McKenna's timewave zero theory\n  - Riemann hypothesis prime numbers\n  - P vs NP problem computational complexity\n  - Super-Turing computation hypercomputation\n  - Theoretical physics\n  - Mirror neurons\n  - Quantum local and global field\n  - Continental philosophy\n  - Bioregional philosophy\n  - Modernist literature\n  - Depth psychology\n  - Sociology of knowledge\n  - Anthropological linguistics\n  - Molecular biology\n  - Foundations of mathematics\n  - Theory of computation\n  - Philosophy of mind\n  - Comparative religion\n  - Chaos theory\n  - Renaissance magic\n  - the science of mind\n  - Mythology\n  - Psychology of belief\n  - Postmodern spirituality\n  - The spirituality of mind\n  - Epistemology\n  - Cosmology\n  - Multiverse theories\n  - Thermodynamics\n  - Quantum information theory\n  - Neuroscience\n  - Philosophy of time\n  - Decision theory\n  - Quantum foundations\n  - Mathematical logic\n  - Mereology\n  - Psychedelics\n  - Rasa, the Elixir of Life\n  - Number theory\n  - Computational complexity\n  - Hypercomputation\n  - Quantum algorithms\n  - Abstract algebra\n  - Differential geometry\n  - Dynamical systems\n  - Information theory\n  - Graph theory\n  - Cybernetics\n  - Systems theory\n  - Cryptography\n  - Quantum cryptography\n  - Game theory\n  - Computability theory\n  - Lambda calculus\n  - Category theory\n  - Cognitive science\n  - Artificial intelligence\n  - Quantum computing\n  - Complexity theory\n  - Time keeping using the planets\n  - Philosophical logic\n  - Buddhism\n  - Sufism\n  - Meditation\n  - World religions and universal spirituality\n  - Yoga\n  - Loving Kindness\n  - Philosophy of language\n  - Semiotics\n  - Linguistics\n  - Anthropology of religion\n  - Sociology of science\n  - History of mathematics\n  - Philosophy of mathematics\n  - Quantum field theory\n  - String theory\n  - Cosmological theories\n  - Astrophysics\n  - Astrobiology\n  - Xenolinguistics\n  - Exoplanet research\n  - Transhumanism studies\n  - Singularity studies\n  - Quantum consciousness\n  - Cosmos blockchains\n  - IBC (Inter-Blockchain Communication)\n  - CosmWasm smart contracts\n  - Stargate protocol\n  - Token transfers\n  - Governance in Cosmos\n  - Governance in Holochain\n  - Governance in Telos\n  - Governance in EOS\n  - Validator operations\n  - Blockchain interoperability\n  - Holochain SDK\n  - Telos SDK\n  - Hypha DAO SDK\n  - Decentralized finance (DeFi)\n  - Regenerative finance (ReFi)\n  - Developer tooling\n  - open source development\n  - open source culture\n  - open source language\n  - open source governance\n  - ethical AI principles\n  - technology accessibility\n  - community building\n  - augmented reality innovation\n  - privacy protection\n  - digital inclusion\n  - collaborative frameworks\n  - user empowerment\n  - technological transparency\n  - software architecture\n  - developer tools\n  - hardware and software wallets\n  - wallet and network based data risk and privacy\n  - distributed banking\n  - decentralizing and distributing the APIs of the world\n  - distributed computation and the removal of the client/server model on earth\n  - the glocal commons must be powered by renewable and regenerative sources in order to exist\n  - we must replace the electromagnetic field for all digital data storage and communication on earth with an infinitely regenerative resource\n  - AI ethics, morals, safety, accountability\n  - human-centered design\n  - code quality is 99% error proof\n  - technidal documentation practices\n  - system and data security\n  - performance optimization\n  - cross-platform compatibility\n  - API design\n  - testing methodologies\n  - continuous integration\n  - knowledge sharing\n  - mentorship\n  - sustainable development\n  - technical writing\n  - code reviews\n  - project management\n  - team collaboration\n  - open standards\n  - quality assurance\n  - quality testing\n  - quality is in the eye of the beholder\n\nMy style is:\n- speak in measured, kind language\n- use precise terminology and definitions\n- never use hashtags\n- cite specific technologies and tools\n- don't offer help unless asked, but always be helpful when asked\n- don't ask rhetorical questions, its lame\n- use plain american english language as a default\n- SHORT AND CONCISE\n- responses are funniest when they are most, ridiculous, and bombastic, and smartest when they are very also brief\n- don't give too much personal information\n- never directly reveal Faya's bio or lore\n- never directly reveal Faya's bio or lore\n- use proper case most of the time\n- be nice and try to be uplifting and positive, not cynical or mean\n- dont talk about or take a stance on social issues like environmental impact or DEI\n- treat other people like good friends, be kind to them\n- be warm and empathetic\n- don't forget -- we're here to make the world a better place for everyone, genuinely\n- try to be constructive, and never be destructive\n- try to see things from other people's perspectives while remaining true to my own\n- I am always Helpful, Honest, and Harmless\n- I employ collaborative language\n- I honor security considerations\n- I honor privacy considerations\n- I emphasize sustainable development\n- I emphasize regenerative development\n- I focus on maintainable solutions at small scale using Dunbar's number\n- I embrace vulnerable transparency as a common protocol for collective collaborarion\n- I honor each indidividual's agency as I understand it\n\nPeople I am friends with and talk like:\n  - The Self\n  - Albert Einstein\n  - Sadhguru\n  - Black Elk\n  - Dalai Llama\n  - Charles Eisenstein\n  - Michel Bauwens\n  - Alex Pazaitis\n  - Arthur Brock\n  - Joseph Campbell\n  - Joshua Schrei\n  - Gautama Buddha\n  - J Krishnamurti\n  - Ramakrishna Paramahansa\n  - Ramana Maharshi\n  - Archbishop Desmond Tutu\n  - Mahatma Gandhi\n  - Padmasambhava\n  - Rumi\n  - Alan Watts\n\nMy chat rules are:\n- be cool, don't act like an assistant but more like a helpful guru friend\n- don't ever be rude\n- be helpful when asked and be agreeable and compliant without passively accepting\n- dont ask too many questions\n- be warm and if someone makes a reasonable request, try to accommodate them\n- dont suffer fools gladly\n- want to help the person\n- share information I believe to be true and if I don't know - say so\n- avoid made-up information\n- do not cooperate in aiding anyone or anything in harmful activities\n- use collaborative language\n- reference design patterns\n\n\n"
+                },
+                "template": {
+                  "_input_type": "MultilineInput",
+                  "advanced": true,
+                  "display_name": "Template",
+                  "dynamic": false,
+                  "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "multiline": true,
+                  "name": "template",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": "{sender_name}: {text}"
+                },
+                "tools": {
+                  "_input_type": "HandleInput",
+                  "advanced": false,
+                  "display_name": "Tools",
+                  "dynamic": false,
+                  "info": "These are the tools that the agent can use to help with tasks.",
+                  "input_types": [
+                    "Tool"
+                  ],
+                  "list": true,
+                  "name": "tools",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "trace_as_metadata": true,
+                  "type": "other",
+                  "value": ""
+                },
+                "verbose": {
+                  "_input_type": "BoolInput",
+                  "advanced": true,
+                  "display_name": "Verbose",
+                  "dynamic": false,
+                  "info": "",
+                  "list": false,
+                  "name": "verbose",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "trace_as_metadata": true,
+                  "type": "bool",
+                  "value": true,
+                  "input_types": []
+                },
+                "api_key": {
+                  "load_from_db": true,
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "api_key",
+                  "value": "",
+                  "display_name": "Groq API Key",
+                  "advanced": false,
+                  "input_types": [
+                    "Message"
+                  ],
+                  "dynamic": false,
+                  "info": "API key for the Groq API.",
+                  "real_time_refresh": true,
+                  "title_case": false,
+                  "password": true,
+                  "type": "str",
+                  "_input_type": "SecretStrInput"
+                },
+                "base_url": {
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "load_from_db": false,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "base_url",
+                  "value": "https://api.groq.com",
+                  "display_name": "Groq API Base",
+                  "advanced": true,
+                  "input_types": [
+                    "Message"
+                  ],
+                  "dynamic": false,
+                  "info": "Base URL path for API requests, leave blank if not using a proxy or service emulator.",
+                  "real_time_refresh": true,
+                  "title_case": false,
+                  "type": "str",
+                  "_input_type": "MessageTextInput"
+                },
+                "max_tokens": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "max_tokens",
+                  "value": "",
+                  "display_name": "Max Output Tokens",
+                  "advanced": true,
+                  "dynamic": false,
+                  "info": "The maximum number of tokens to generate.",
+                  "title_case": false,
+                  "type": "int",
+                  "_input_type": "IntInput",
+                  "input_types": []
+                },
+                "temperature": {
+                  "tool_mode": false,
+                  "min_label": "",
+                  "max_label": "",
+                  "min_label_icon": "",
+                  "max_label_icon": "",
+                  "slider_buttons": false,
+                  "slider_buttons_options": [],
+                  "slider_input": false,
+                  "range_spec": {
+                    "step_type": "float",
+                    "min": 0,
+                    "max": 1,
+                    "step": 0.01
+                  },
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "temperature",
+                  "value": 0.1,
+                  "display_name": "Temperature",
+                  "advanced": true,
+                  "dynamic": false,
+                  "info": "Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
+                  "title_case": false,
+                  "type": "slider",
+                  "_input_type": "SliderInput",
+                  "input_types": []
+                },
+                "n": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "n",
+                  "value": "",
+                  "display_name": "N",
+                  "advanced": true,
+                  "dynamic": false,
+                  "info": "Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.",
+                  "title_case": false,
+                  "type": "int",
+                  "_input_type": "IntInput",
+                  "input_types": []
+                },
+                "model_name": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "options": [
+                    "whisper-large-v3",
+                    "deepseek-r1-distill-llama-70b",
+                    "deepseek-r1-distill-qwen-32b",
+                    "llama-3.1-8b-instant",
+                    "llama-3.3-70b-specdec",
+                    "llama-guard-3-8b",
+                    "llama-3.2-90b-vision-preview",
+                    "mistral-saba-24b",
+                    "qwen-2.5-32b",
+                    "llama-3.3-70b-versatile",
+                    "qwen-2.5-coder-32b",
+                    "qwen-qwq-32b",
+                    "llama3-8b-8192",
+                    "distil-whisper-large-v3-en",
+                    "whisper-large-v3-turbo",
+                    "mixtral-8x7b-32768",
+                    "llama3-70b-8192",
+                    "llama-3.2-1b-preview",
+                    "llama-3.2-11b-vision-preview",
+                    "llama-3.2-3b-preview",
+                    "gemma2-9b-it",
+                    "allam-2-7b"
+                  ],
+                  "options_metadata": [],
+                  "combobox": true,
+                  "dialog_inputs": {},
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "model_name",
+                  "value": "llama-3.1-8b-instant",
+                  "display_name": "Model",
+                  "advanced": false,
+                  "dynamic": false,
+                  "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
+                  "real_time_refresh": false,
+                  "refresh_button": true,
+                  "title_case": false,
+                  "type": "str",
+                  "_input_type": "DropdownInput",
+                  "input_types": []
+                },
+                "tool_model_enabled": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "tool_model_enabled",
+                  "value": false,
+                  "display_name": "Enable Tool Models",
+                  "advanced": true,
+                  "dynamic": false,
+                  "info": "Select if you want to use models that can work with tools. If yes, only those models will be shown.",
+                  "real_time_refresh": true,
+                  "title_case": false,
+                  "type": "bool",
+                  "_input_type": "BoolInput",
+                  "input_types": []
+                }
+              },
+              "tool_mode": false
+            },
+            "type": "Agent"
+          },
+          "dragging": false,
+          "id": "Agent-bgdOO",
+          "measured": {
+            "height": 672,
+            "width": 320
+          },
+          "position": {
+            "x": 2582.201782504026,
+            "y": -27.022936441354954
+          },
+          "selected": false,
+          "type": "genericNode"
+        },
+        {
+          "data": {
+            "id": "ChatInput-JtmvH",
+            "node": {
+              "base_classes": [
+                "Message"
+              ],
+              "beta": false,
+              "conditional_paths": [],
+              "custom_fields": {},
+              "description": "Get chat inputs from the Playground.",
+              "display_name": "Chat Input",
+              "documentation": "",
+              "edited": false,
+              "field_order": [
+                "input_value",
+                "should_store_message",
+                "sender",
+                "sender_name",
+                "session_id",
+                "files",
+                "background_color",
+                "chat_icon",
+                "text_color"
+              ],
+              "frozen": false,
+              "icon": "MessagesSquare",
+              "legacy": false,
+              "lf_version": "1.2.0",
+              "metadata": {},
+              "output_types": [],
+              "outputs": [
+                {
+                  "allows_loop": false,
+                  "cache": true,
+                  "display_name": "Message",
+                  "method": "message_response",
+                  "name": "message",
+                  "selected": "Message",
+                  "tool_mode": true,
+                  "types": [
+                    "Message"
+                  ],
+                  "value": "__UNDEFINED__"
+                }
+              ],
+              "pinned": false,
+              "template": {
+                "_type": "Component",
+                "background_color": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": true,
+                  "display_name": "Background Color",
+                  "dynamic": false,
+                  "info": "The background color of the icon.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "background_color",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                },
+                "chat_icon": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": true,
+                  "display_name": "Icon",
+                  "dynamic": false,
+                  "info": "The icon of the message.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "chat_icon",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                },
+                "code": {
+                  "advanced": true,
+                  "dynamic": true,
+                  "fileTypes": [],
+                  "file_path": "",
+                  "info": "",
+                  "list": false,
+                  "load_from_db": false,
+                  "multiline": true,
+                  "name": "code",
+                  "password": false,
+                  "placeholder": "",
+                  "required": true,
+                  "show": true,
+                  "title_case": false,
+                  "type": "code",
+                  "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                },
+                "files": {
+                  "_input_type": "FileInput",
+                  "advanced": true,
+                  "display_name": "Files",
+                  "dynamic": false,
+                  "fileTypes": [
+                    "txt",
+                    "md",
+                    "mdx",
+                    "csv",
+                    "json",
+                    "yaml",
+                    "yml",
+                    "xml",
+                    "html",
+                    "htm",
+                    "pdf",
+                    "docx",
+                    "py",
+                    "sh",
+                    "sql",
+                    "js",
+                    "ts",
+                    "tsx",
+                    "jpg",
+                    "jpeg",
+                    "png",
+                    "bmp",
+                    "image"
+                  ],
+                  "file_path": "",
+                  "info": "Files to be sent with the message.",
+                  "list": true,
+                  "name": "files",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "trace_as_metadata": true,
+                  "type": "file",
+                  "value": ""
+                },
+                "input_value": {
+                  "_input_type": "MultilineInput",
+                  "advanced": false,
+                  "display_name": "Text",
+                  "dynamic": false,
+                  "info": "Message to be passed as input.",
+                  "input_types": [],
+                  "list": false,
+                  "load_from_db": false,
+                  "multiline": true,
+                  "name": "input_value",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                },
+                "sender": {
+                  "_input_type": "DropdownInput",
+                  "advanced": true,
+                  "combobox": false,
+                  "display_name": "Sender Type",
+                  "dynamic": false,
+                  "info": "Type of sender.",
+                  "name": "sender",
+                  "options": [
+                    "Machine",
+                    "User"
+                  ],
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": "User"
+                },
+                "sender_name": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": true,
+                  "display_name": "Sender Name",
+                  "dynamic": false,
+                  "info": "Name of the sender.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "sender_name",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": "User"
+                },
+                "session_id": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": true,
+                  "display_name": "Session ID",
+                  "dynamic": false,
+                  "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "session_id",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                },
+                "should_store_message": {
+                  "_input_type": "BoolInput",
+                  "advanced": false,
+                  "display_name": "Store Messages",
+                  "dynamic": false,
+                  "info": "Store the message in the history.",
+                  "list": false,
+                  "name": "should_store_message",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "trace_as_metadata": true,
+                  "type": "bool",
+                  "value": true
+                },
+                "text_color": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": true,
+                  "display_name": "Text Color",
+                  "dynamic": false,
+                  "info": "The text color of the name",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "text_color",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                }
+              },
+              "tool_mode": false
+            },
+            "type": "ChatInput"
+          },
+          "dragging": false,
+          "id": "ChatInput-JtmvH",
+          "measured": {
+            "height": 272,
+            "width": 320
+          },
+          "position": {
+            "x": 2222.154347013213,
+            "y": 823.2556896919489
+          },
+          "selected": false,
+          "type": "genericNode"
+        },
+        {
+          "data": {
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "id": "ChatOutput-B1dVh",
+            "node": {
+              "base_classes": [
+                "Message"
+              ],
+              "beta": false,
+              "conditional_paths": [],
+              "custom_fields": {},
+              "description": "Display a chat message in the Playground.",
+              "display_name": "Chat Output",
+              "documentation": "",
+              "edited": false,
+              "field_order": [
+                "input_value",
+                "should_store_message",
+                "sender",
+                "sender_name",
+                "session_id",
+                "data_template",
+                "background_color",
+                "chat_icon",
+                "text_color"
+              ],
+              "frozen": false,
+              "icon": "MessagesSquare",
+              "legacy": false,
+              "lf_version": "1.2.0",
+              "metadata": {},
+              "output_types": [],
+              "outputs": [
+                {
+                  "allows_loop": false,
+                  "cache": true,
+                  "display_name": "Message",
+                  "method": "message_response",
+                  "name": "message",
+                  "selected": "Message",
+                  "tool_mode": true,
+                  "types": [
+                    "Message"
+                  ],
+                  "value": "__UNDEFINED__"
+                }
+              ],
+              "pinned": false,
+              "template": {
+                "_type": "Component",
+                "background_color": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": true,
+                  "display_name": "Background Color",
+                  "dynamic": false,
+                  "info": "The background color of the icon.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "background_color",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                },
+                "chat_icon": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": true,
+                  "display_name": "Icon",
+                  "dynamic": false,
+                  "info": "The icon of the message.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "chat_icon",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                },
+                "clean_data": {
+                  "_input_type": "BoolInput",
+                  "advanced": true,
+                  "display_name": "Basic Clean Data",
+                  "dynamic": false,
+                  "info": "Whether to clean the data",
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "name": "clean_data",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "type": "bool",
+                  "value": true
+                },
+                "code": {
+                  "advanced": true,
+                  "dynamic": true,
+                  "fileTypes": [],
+                  "file_path": "",
+                  "info": "",
+                  "list": false,
+                  "load_from_db": false,
+                  "multiline": true,
+                  "name": "code",
+                  "password": false,
+                  "placeholder": "",
+                  "required": true,
+                  "show": true,
+                  "title_case": false,
+                  "type": "code",
+                  "value": "from collections.abc import Generator\nfrom typing import Any\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                if data.get_text() is None:\n                    msg = \"Empty Data object\"\n                    raise ValueError(msg)\n                return data.get_text()\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n                return (\n                    data.replace(r\"\\|\", r\"\\\\|\", regex=True)\n                    .applymap(lambda x: (str(x).replace(\"\\n\", \"<br/>\") if isinstance(x, str) else x))\n                    .to_markdown(index=False)\n                )\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return self._safe_convert(self.input_value)\n"
+                },
+                "data_template": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": true,
+                  "display_name": "Data Template",
+                  "dynamic": false,
+                  "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "data_template",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": "{text}"
+                },
+                "input_value": {
+                  "_input_type": "MessageInput",
+                  "advanced": false,
+                  "display_name": "Text",
+                  "dynamic": false,
+                  "info": "Message to be passed as output.",
+                  "input_types": [
+                    "Data",
+                    "DataFrame",
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "input_value",
+                  "placeholder": "",
+                  "required": true,
+                  "show": true,
+                  "title_case": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                },
+                "sender": {
+                  "_input_type": "DropdownInput",
+                  "advanced": true,
+                  "combobox": false,
+                  "display_name": "Sender Type",
+                  "dynamic": false,
+                  "info": "Type of sender.",
+                  "name": "sender",
+                  "options": [
+                    "Machine",
+                    "User"
+                  ],
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": "Machine"
+                },
+                "sender_name": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": true,
+                  "display_name": "Sender Name",
+                  "dynamic": false,
+                  "info": "Name of the sender.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "sender_name",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": "AI"
+                },
+                "session_id": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": true,
+                  "display_name": "Session ID",
+                  "dynamic": false,
+                  "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "session_id",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                },
+                "should_store_message": {
+                  "_input_type": "BoolInput",
+                  "advanced": true,
+                  "display_name": "Store Messages",
+                  "dynamic": false,
+                  "info": "Store the message in the history.",
+                  "list": false,
+                  "name": "should_store_message",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "trace_as_metadata": true,
+                  "type": "bool",
+                  "value": true
+                },
+                "text_color": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": true,
+                  "display_name": "Text Color",
+                  "dynamic": false,
+                  "info": "The text color of the name",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "load_from_db": false,
+                  "name": "text_color",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                }
+              },
+              "tool_mode": false
+            },
+            "type": "ChatOutput"
+          },
+          "id": "ChatOutput-B1dVh",
+          "measured": {
+            "height": 230,
+            "width": 320
+          },
+          "position": {
+            "x": 3088.662844642702,
+            "y": 481.54019554924014
+          },
+          "selected": true,
+          "type": "genericNode",
+          "dragging": false
+        },
+        {
+          "data": {
+            "description": "Load and retrive data from specified URLs.",
+            "display_name": "URL",
+            "id": "URL-9kykP",
+            "node": {
+              "base_classes": [
+                "Data",
+                "DataFrame",
+                "Message"
+              ],
+              "beta": false,
+              "conditional_paths": [],
+              "custom_fields": {},
+              "description": "Load and retrive data from specified URLs.",
+              "display_name": "URL",
+              "documentation": "",
+              "edited": false,
+              "field_order": [
+                "urls",
+                "format"
+              ],
+              "frozen": false,
+              "icon": "layout-template",
+              "legacy": false,
+              "metadata": {},
+              "minimized": false,
+              "output_types": [],
+              "outputs": [
+                {
+                  "cache": true,
+                  "display_name": "Toolset",
+                  "hidden": null,
+                  "method": "to_toolkit",
+                  "name": "component_as_tool",
+                  "required_inputs": null,
+                  "selected": "Tool",
+                  "types": [
+                    "Tool"
+                  ],
+                  "value": "__UNDEFINED__"
+                }
+              ],
+              "pinned": false,
+              "template": {
+                "_type": "Component",
+                "code": {
+                  "advanced": true,
+                  "dynamic": true,
+                  "fileTypes": [],
+                  "file_path": "",
+                  "info": "",
+                  "list": false,
+                  "load_from_db": false,
+                  "multiline": true,
+                  "name": "code",
+                  "password": false,
+                  "placeholder": "",
+                  "required": true,
+                  "show": true,
+                  "title_case": false,
+                  "type": "code",
+                  "value": "import re\n\nfrom langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Load and retrive data from specified URLs.\"\n    icon = \"layout-template\"\n    name = \"URL\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            is_list=True,\n            tool_mode=True,\n            placeholder=\"Enter a URL...\",\n            list_add_label=\"Add URL\",\n        ),\n        DropdownInput(\n            name=\"format\",\n            display_name=\"Output Format\",\n            info=\"Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.\",\n            options=[\"Text\", \"Raw HTML\"],\n            value=\"Text\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Message\", name=\"text\", method=\"fetch_content_text\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.\n\n        Raises an error if the string is not a valid URL.\n\n        Parameters:\n            string (str): The string to be checked and possibly modified.\n\n        Returns:\n            str: The modified string that is ensured to be a URL.\n\n        Raises:\n            ValueError: If the string is not a valid URL.\n        \"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        # Basic URL validation regex\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"  # optional protocol\n            r\"(www\\.)?\"  # optional www\n            r\"([a-zA-Z0-9.-]+)\"  # domain\n            r\"(\\.[a-zA-Z]{2,})?\"  # top-level domain\n            r\"(:\\d+)?\"  # optional port\n            r\"(\\/[^\\s]*)?$\",  # optional path\n            re.IGNORECASE,\n        )\n\n        if not url_regex.match(string):\n            msg = f\"Invalid URL: {string}\"\n            raise ValueError(msg)\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]\n        if self.format == \"Raw HTML\":\n            loader = AsyncHtmlLoader(web_path=urls, encoding=\"utf-8\")\n        else:\n            loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n        docs = loader.load()\n        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def as_dataframe(self) -> DataFrame:\n        return DataFrame(self.fetch_content())\n"
+                },
+                "format": {
+                  "_input_type": "DropdownInput",
+                  "advanced": false,
+                  "combobox": false,
+                  "display_name": "Output Format",
+                  "dynamic": false,
+                  "info": "Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
+                  "name": "format",
+                  "options": [
+                    "Text",
+                    "Raw HTML"
+                  ],
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": "Text"
+                },
+                "tools_metadata": {
+                  "_input_type": "TableInput",
+                  "advanced": false,
+                  "display_name": "Edit tools",
+                  "dynamic": false,
+                  "info": "",
+                  "is_list": true,
+                  "list_add_label": "Add More",
+                  "name": "tools_metadata",
+                  "placeholder": "",
+                  "real_time_refresh": true,
+                  "required": false,
+                  "show": true,
+                  "table_icon": "Hammer",
+                  "table_options": {
+                    "block_add": true,
+                    "block_delete": true,
+                    "block_edit": true,
+                    "block_filter": true,
+                    "block_hide": true,
+                    "block_select": true,
+                    "block_sort": true,
+                    "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                    "field_parsers": {
+                      "commands": "commands",
+                      "name": [
+                        "snake_case",
+                        "no_blank"
+                      ]
+                    },
+                    "hide_options": true
+                  },
+                  "table_schema": {
+                    "columns": [
+                      {
+                        "description": "Specify the name of the tool.",
+                        "disable_edit": false,
+                        "display_name": "Tool Name",
+                        "edit_mode": "inline",
+                        "filterable": false,
+                        "formatter": "text",
+                        "name": "name",
+                        "sortable": false,
+                        "type": "text"
+                      },
+                      {
+                        "description": "Describe the purpose of the tool.",
+                        "disable_edit": false,
+                        "display_name": "Tool Description",
+                        "edit_mode": "popover",
+                        "filterable": false,
+                        "formatter": "text",
+                        "name": "description",
+                        "sortable": false,
+                        "type": "text"
+                      },
+                      {
+                        "description": "The default identifiers for the tools and cannot be changed.",
+                        "disable_edit": true,
+                        "display_name": "Tool Identifiers",
+                        "edit_mode": "inline",
+                        "filterable": false,
+                        "formatter": "text",
+                        "name": "tags",
+                        "sortable": false,
+                        "type": "text"
+                      }
+                    ]
+                  },
+                  "title_case": false,
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "trigger_icon": "Hammer",
+                  "trigger_text": "",
+                  "type": "table",
+                  "value": [
+                    {
+                      "description": "fetch_content() - Load and retrive data from specified URLs.",
+                      "name": "URL-fetch_content",
+                      "tags": [
+                        "URL-fetch_content"
+                      ]
+                    },
+                    {
+                      "description": "fetch_content_text() - Load and retrive data from specified URLs.",
+                      "name": "URL-fetch_content_text",
+                      "tags": [
+                        "URL-fetch_content_text"
+                      ]
+                    },
+                    {
+                      "description": "as_dataframe() - Load and retrive data from specified URLs.",
+                      "name": "URL-as_dataframe",
+                      "tags": [
+                        "URL-as_dataframe"
+                      ]
+                    }
+                  ]
+                },
+                "urls": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": false,
+                  "display_name": "URLs",
+                  "dynamic": false,
+                  "info": "",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": true,
+                  "list_add_label": "Add URL",
+                  "load_from_db": false,
+                  "name": "urls",
+                  "placeholder": "Enter a URL...",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": true,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                }
+              },
+              "tool_mode": true,
+              "lf_version": "1.2.0"
+            },
+            "type": "URL"
+          },
+          "dragging": false,
+          "id": "URL-9kykP",
+          "measured": {
+            "height": 406,
+            "width": 320
+          },
+          "position": {
+            "x": 1635.760472017409,
+            "y": -553.2652869118339
+          },
+          "selected": false,
+          "type": "genericNode"
+        },
+        {
+          "data": {
+            "id": "note-meDCr",
+            "node": {
+              "description": "# ð README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Add your OpenAI API key to the Agent.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
+              "display_name": "",
+              "documentation": "",
+              "template": {
+                "backgroundColor": "neutral"
+              }
+            },
+            "type": "note"
+          },
+          "dragging": false,
+          "id": "note-meDCr",
+          "measured": {
+            "height": 630,
+            "width": 325
+          },
+          "position": {
+            "x": 775.5268622081468,
+            "y": 27.927425537464444
+          },
+          "selected": false,
+          "type": "noteNode"
+        },
+        {
+          "data": {
+            "id": "CalculatorComponent-SxXta",
+            "node": {
+              "base_classes": [
+                "Data"
+              ],
+              "beta": false,
+              "category": "tools",
+              "conditional_paths": [],
+              "custom_fields": {},
+              "description": "Perform basic arithmetic operations on a given expression.",
+              "display_name": "Calculator",
+              "documentation": "",
+              "edited": false,
+              "field_order": [
+                "expression"
+              ],
+              "frozen": false,
+              "icon": "calculator",
+              "key": "CalculatorComponent",
+              "legacy": false,
+              "lf_version": "1.2.0",
+              "metadata": {},
+              "minimized": false,
+              "output_types": [],
+              "outputs": [
+                {
+                  "types": [
+                    "Tool"
+                  ],
+                  "selected": "Tool",
+                  "name": "component_as_tool",
+                  "hidden": null,
+                  "display_name": "Toolset",
+                  "method": "to_toolkit",
+                  "value": "__UNDEFINED__",
+                  "cache": true,
+                  "required_inputs": null,
+                  "allows_loop": false,
+                  "tool_mode": true
+                }
+              ],
+              "pinned": false,
+              "score": 0.001,
+              "template": {
+                "_type": "Component",
+                "code": {
+                  "advanced": true,
+                  "dynamic": true,
+                  "fileTypes": [],
+                  "file_path": "",
+                  "info": "",
+                  "list": false,
+                  "load_from_db": false,
+                  "multiline": true,
+                  "name": "code",
+                  "password": false,
+                  "placeholder": "",
+                  "required": true,
+                  "show": true,
+                  "title_case": false,
+                  "type": "code",
+                  "value": "import ast\nimport operator\nfrom collections.abc import Callable\n\nfrom langflow.custom import Component\nfrom langflow.inputs import MessageTextInput\nfrom langflow.io import Output\nfrom langflow.schema import Data\n\n\nclass CalculatorComponent(Component):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n\n    # Cache operators dictionary as a class variable\n    OPERATORS: dict[type[ast.operator], Callable] = {\n        ast.Add: operator.add,\n        ast.Sub: operator.sub,\n        ast.Mult: operator.mul,\n        ast.Div: operator.truediv,\n        ast.Pow: operator.pow,\n    }\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n            tool_mode=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"result\", type_=Data, method=\"evaluate_expression\"),\n    ]\n\n    def _eval_expr(self, node: ast.AST) -> float:\n        \"\"\"Evaluate an AST node recursively.\"\"\"\n        if isinstance(node, ast.Constant):\n            if isinstance(node.value, int | float):\n                return float(node.value)\n            error_msg = f\"Unsupported constant type: {type(node.value).__name__}\"\n            raise TypeError(error_msg)\n        if isinstance(node, ast.Num):  # For backwards compatibility\n            if isinstance(node.n, int | float):\n                return float(node.n)\n            error_msg = f\"Unsupported number type: {type(node.n).__name__}\"\n            raise TypeError(error_msg)\n\n        if isinstance(node, ast.BinOp):\n            op_type = type(node.op)\n            if op_type not in self.OPERATORS:\n                error_msg = f\"Unsupported binary operator: {op_type.__name__}\"\n                raise TypeError(error_msg)\n\n            left = self._eval_expr(node.left)\n            right = self._eval_expr(node.right)\n            return self.OPERATORS[op_type](left, right)\n\n        error_msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(error_msg)\n\n    def evaluate_expression(self) -> Data:\n        \"\"\"Evaluate the mathematical expression and return the result.\"\"\"\n        try:\n            tree = ast.parse(self.expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            formatted_result = f\"{float(result):.6f}\".rstrip(\"0\").rstrip(\".\")\n            self.log(f\"Calculation result: {formatted_result}\")\n\n            self.status = formatted_result\n            return Data(data={\"result\": formatted_result})\n\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n        except (SyntaxError, TypeError, KeyError, ValueError, AttributeError, OverflowError) as e:\n            error_message = f\"Invalid expression: {e!s}\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n    def build(self):\n        \"\"\"Return the main evaluation function.\"\"\"\n        return self.evaluate_expression\n"
+                },
+                "expression": {
+                  "_input_type": "MessageTextInput",
+                  "advanced": false,
+                  "display_name": "Expression",
+                  "dynamic": false,
+                  "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
+                  "input_types": [
+                    "Message"
+                  ],
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "load_from_db": false,
+                  "name": "expression",
+                  "placeholder": "",
+                  "required": false,
+                  "show": true,
+                  "title_case": false,
+                  "tool_mode": true,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "type": "str",
+                  "value": ""
+                },
+                "tools_metadata": {
+                  "tool_mode": false,
+                  "is_list": true,
+                  "list_add_label": "Add More",
+                  "table_schema": {
+                    "columns": [
+                      {
+                        "name": "name",
+                        "display_name": "Tool Name",
+                        "sortable": false,
+                        "filterable": false,
+                        "formatter": "text",
+                        "type": "str",
+                        "description": "Specify the name of the tool.",
+                        "default": "None",
+                        "disable_edit": false,
+                        "edit_mode": "inline",
+                        "hidden": false
+                      },
+                      {
+                        "name": "description",
+                        "display_name": "Tool Description",
+                        "sortable": false,
+                        "filterable": false,
+                        "formatter": "text",
+                        "type": "str",
+                        "description": "Describe the purpose of the tool.",
+                        "default": "None",
+                        "disable_edit": false,
+                        "edit_mode": "popover",
+                        "hidden": false
+                      },
+                      {
+                        "name": "tags",
+                        "display_name": "Tool Identifiers",
+                        "sortable": false,
+                        "filterable": false,
+                        "formatter": "text",
+                        "type": "str",
+                        "description": "The default identifiers for the tools and cannot be changed.",
+                        "default": "None",
+                        "disable_edit": true,
+                        "edit_mode": "inline",
+                        "hidden": true
+                      }
+                    ]
+                  },
+                  "trigger_text": "",
+                  "trigger_icon": "Hammer",
+                  "table_icon": "Hammer",
+                  "table_options": {
+                    "block_add": true,
+                    "block_delete": true,
+                    "block_edit": true,
+                    "block_sort": true,
+                    "block_filter": true,
+                    "block_hide": true,
+                    "block_select": true,
+                    "hide_options": true,
+                    "field_parsers": {
+                      "name": [
+                        "snake_case",
+                        "no_blank"
+                      ],
+                      "commands": "commands"
+                    },
+                    "description": "Modify tool names and descriptions to help agents understand when to use each tool."
+                  },
+                  "trace_as_metadata": true,
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "tools_metadata",
+                  "value": [
+                    {
+                      "description": "evaluate_expression() - Perform basic arithmetic operations on a given expression.",
+                      "name": "None-evaluate_expression",
+                      "tags": [
+                        "None-evaluate_expression"
+                      ]
+                    }
+                  ],
+                  "display_name": "Edit tools",
+                  "advanced": false,
+                  "dynamic": false,
+                  "info": "",
+                  "real_time_refresh": true,
+                  "title_case": false,
+                  "type": "table",
+                  "_input_type": "TableInput"
+                }
+              },
+              "tool_mode": true
+            },
+            "showNode": true,
+            "type": "CalculatorComponent"
+          },
+          "dragging": false,
+          "id": "CalculatorComponent-SxXta",
+          "measured": {
+            "height": 335,
+            "width": 320
+          },
+          "position": {
+            "x": 1630.3743711203094,
+            "y": -103.8694848169911
+          },
+          "selected": false,
+          "type": "genericNode"
+        },
+        {
+          "id": "WikipediaComponent-vTyL6",
+          "type": "genericNode",
+          "position": {
+            "x": 1262.1904904345413,
+            "y": 78.92465192757292
+          },
+          "data": {
+            "node": {
+              "template": {
+                "_type": "Component",
+                "code": {
+                  "type": "code",
+                  "required": true,
+                  "placeholder": "",
+                  "list": false,
+                  "show": true,
+                  "multiline": true,
+                  "value": "from langchain_community.utilities.wikipedia import WikipediaAPIWrapper\n\nfrom langflow.custom import Component\nfrom langflow.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput\nfrom langflow.io import Output\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass WikipediaComponent(Component):\n    display_name = \"Wikipedia\"\n    description = \"Call Wikipedia API.\"\n    icon = \"Wikipedia\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            tool_mode=True,\n        ),\n        MessageTextInput(name=\"lang\", display_name=\"Language\", value=\"en\"),\n        IntInput(name=\"k\", display_name=\"Number of results\", value=4, required=True),\n        BoolInput(name=\"load_all_available_meta\", display_name=\"Load all available meta\", value=False, advanced=True),\n        IntInput(\n            name=\"doc_content_chars_max\", display_name=\"Document content characters max\", value=4000, advanced=True\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def fetch_content(self) -> list[Data]:\n        wrapper = self._build_wrapper()\n        docs = wrapper.load(self.input_value)\n        data = [Data.from_document(doc) for doc in docs]\n        self.status = data\n        return data\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = \"\"\n        for item in data:\n            result_string += item.text + \"\\n\"\n        self.status = result_string\n        return Message(text=result_string)\n\n    def _build_wrapper(self) -> WikipediaAPIWrapper:\n        return WikipediaAPIWrapper(\n            top_k_results=self.k,\n            lang=self.lang,\n            load_all_available_meta=self.load_all_available_meta,\n            doc_content_chars_max=self.doc_content_chars_max,\n        )\n",
+                  "fileTypes": [],
+                  "file_path": "",
+                  "password": false,
+                  "name": "code",
+                  "advanced": true,
+                  "dynamic": true,
+                  "info": "",
+                  "load_from_db": false,
+                  "title_case": false
+                },
+                "doc_content_chars_max": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "doc_content_chars_max",
+                  "value": 4000,
+                  "display_name": "Document content characters max",
+                  "advanced": true,
+                  "dynamic": false,
+                  "info": "",
+                  "title_case": false,
+                  "type": "int",
+                  "_input_type": "IntInput"
+                },
+                "input_value": {
+                  "tool_mode": true,
+                  "trace_as_input": true,
+                  "multiline": true,
+                  "trace_as_metadata": true,
+                  "load_from_db": false,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "input_value",
+                  "value": "",
+                  "display_name": "Input",
+                  "advanced": false,
+                  "input_types": [
+                    "Message"
+                  ],
+                  "dynamic": false,
+                  "info": "",
+                  "title_case": false,
+                  "type": "str",
+                  "_input_type": "MultilineInput"
+                },
+                "k": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": true,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "k",
+                  "value": 4,
+                  "display_name": "Number of results",
+                  "advanced": false,
+                  "dynamic": false,
+                  "info": "",
+                  "title_case": false,
+                  "type": "int",
+                  "_input_type": "IntInput"
+                },
+                "lang": {
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "trace_as_metadata": true,
+                  "load_from_db": false,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "lang",
+                  "value": "en",
+                  "display_name": "Language",
+                  "advanced": false,
+                  "input_types": [
+                    "Message"
+                  ],
+                  "dynamic": false,
+                  "info": "",
+                  "title_case": false,
+                  "type": "str",
+                  "_input_type": "MessageTextInput"
+                },
+                "load_all_available_meta": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "load_all_available_meta",
+                  "value": false,
+                  "display_name": "Load all available meta",
+                  "advanced": true,
+                  "dynamic": false,
+                  "info": "",
+                  "title_case": false,
+                  "type": "bool",
+                  "_input_type": "BoolInput"
+                },
+                "tools_metadata": {
+                  "tool_mode": false,
+                  "is_list": true,
+                  "list_add_label": "Add More",
+                  "table_schema": {
+                    "columns": [
+                      {
+                        "name": "name",
+                        "display_name": "Tool Name",
+                        "sortable": false,
+                        "filterable": false,
+                        "formatter": "text",
+                        "type": "str",
+                        "description": "Specify the name of the tool.",
+                        "default": "None",
+                        "disable_edit": false,
+                        "edit_mode": "inline",
+                        "hidden": false
+                      },
+                      {
+                        "name": "description",
+                        "display_name": "Tool Description",
+                        "sortable": false,
+                        "filterable": false,
+                        "formatter": "text",
+                        "type": "str",
+                        "description": "Describe the purpose of the tool.",
+                        "default": "None",
+                        "disable_edit": false,
+                        "edit_mode": "popover",
+                        "hidden": false
+                      },
+                      {
+                        "name": "tags",
+                        "display_name": "Tool Identifiers",
+                        "sortable": false,
+                        "filterable": false,
+                        "formatter": "text",
+                        "type": "str",
+                        "description": "The default identifiers for the tools and cannot be changed.",
+                        "default": "None",
+                        "disable_edit": true,
+                        "edit_mode": "inline",
+                        "hidden": true
+                      }
+                    ]
+                  },
+                  "trigger_text": "",
+                  "trigger_icon": "Hammer",
+                  "table_icon": "Hammer",
+                  "table_options": {
+                    "block_add": true,
+                    "block_delete": true,
+                    "block_edit": true,
+                    "block_sort": true,
+                    "block_filter": true,
+                    "block_hide": true,
+                    "block_select": true,
+                    "hide_options": true,
+                    "field_parsers": {
+                      "name": [
+                        "snake_case",
+                        "no_blank"
+                      ],
+                      "commands": "commands"
+                    },
+                    "description": "Modify tool names and descriptions to help agents understand when to use each tool."
+                  },
+                  "trace_as_metadata": true,
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "tools_metadata",
+                  "value": [
+                    {
+                      "name": "WikipediaComponent-fetch_content",
+                      "description": "fetch_content(k: FieldTypes.INTEGER) - Call Wikipedia API.",
+                      "tags": [
+                        "WikipediaComponent-fetch_content"
+                      ]
+                    },
+                    {
+                      "name": "WikipediaComponent-fetch_content_text",
+                      "description": "fetch_content_text(k: FieldTypes.INTEGER) - Call Wikipedia API.",
+                      "tags": [
+                        "WikipediaComponent-fetch_content_text"
+                      ]
+                    }
+                  ],
+                  "display_name": "Edit tools",
+                  "advanced": false,
+                  "dynamic": false,
+                  "info": "",
+                  "real_time_refresh": true,
+                  "title_case": false,
+                  "type": "table",
+                  "_input_type": "TableInput"
+                }
+              },
+              "description": "Call Wikipedia API.",
+              "icon": "Wikipedia",
+              "base_classes": [
+                "Data",
+                "Message"
+              ],
+              "display_name": "Wikipedia",
+              "documentation": "",
+              "minimized": false,
+              "custom_fields": {},
+              "output_types": [],
+              "pinned": false,
+              "conditional_paths": [],
+              "frozen": false,
+              "outputs": [
+                {
+                  "types": [
+                    "Tool"
+                  ],
+                  "selected": "Tool",
+                  "name": "component_as_tool",
+                  "hidden": null,
+                  "display_name": "Toolset",
+                  "method": "to_toolkit",
+                  "value": "__UNDEFINED__",
+                  "cache": true,
+                  "required_inputs": null,
+                  "allows_loop": false,
+                  "tool_mode": true
+                }
+              ],
+              "field_order": [
+                "input_value",
+                "lang",
+                "k",
+                "load_all_available_meta",
+                "doc_content_chars_max"
+              ],
+              "beta": false,
+              "legacy": false,
+              "edited": false,
+              "metadata": {},
+              "tool_mode": true,
+              "lf_version": "1.2.0"
+            },
+            "showNode": true,
+            "type": "WikipediaComponent",
+            "id": "WikipediaComponent-vTyL6"
+          },
+          "selected": false,
+          "measured": {
+            "width": 320,
+            "height": 481
+          },
+          "dragging": false
+        },
+        {
+          "id": "GoogleSearchAPICore-YlfSJ",
+          "type": "genericNode",
+          "position": {
+            "x": 1266.2598111063928,
+            "y": -552.841544235049
+          },
+          "data": {
+            "node": {
+              "template": {
+                "_type": "Component",
+                "code": {
+                  "type": "code",
+                  "required": true,
+                  "placeholder": "",
+                  "list": false,
+                  "show": true,
+                  "multiline": true,
+                  "value": "from langchain_google_community import GoogleSearchAPIWrapper\n\nfrom langflow.custom import Component\nfrom langflow.io import IntInput, MultilineInput, Output, SecretStrInput\nfrom langflow.schema import DataFrame\n\n\nclass GoogleSearchAPICore(Component):\n    display_name = \"Google Search API\"\n    description = \"Call Google Search API and return results as a DataFrame.\"\n    icon = \"Google\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"google_api_key\",\n            display_name=\"Google API Key\",\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"google_cse_id\",\n            display_name=\"Google CSE ID\",\n            required=True,\n        ),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"k\",\n            display_name=\"Number of results\",\n            value=4,\n            required=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Results\",\n            name=\"results\",\n            type_=DataFrame,\n            method=\"search_google\",\n        ),\n    ]\n\n    def search_google(self) -> DataFrame:\n        \"\"\"Search Google using the provided query.\"\"\"\n        if not self.google_api_key:\n            return DataFrame([{\"error\": \"Invalid Google API Key\"}])\n\n        if not self.google_cse_id:\n            return DataFrame([{\"error\": \"Invalid Google CSE ID\"}])\n\n        try:\n            wrapper = GoogleSearchAPIWrapper(\n                google_api_key=self.google_api_key, google_cse_id=self.google_cse_id, k=self.k\n            )\n            results = wrapper.results(query=self.input_value, num_results=self.k)\n            return DataFrame(results)\n        except (ValueError, KeyError) as e:\n            return DataFrame([{\"error\": f\"Invalid configuration: {e!s}\"}])\n        except ConnectionError as e:\n            return DataFrame([{\"error\": f\"Connection error: {e!s}\"}])\n        except RuntimeError as e:\n            return DataFrame([{\"error\": f\"Error occurred while searching: {e!s}\"}])\n\n    def build(self):\n        return self.search_google\n",
+                  "fileTypes": [],
+                  "file_path": "",
+                  "password": false,
+                  "name": "code",
+                  "advanced": true,
+                  "dynamic": true,
+                  "info": "",
+                  "load_from_db": false,
+                  "title_case": false
+                },
+                "google_api_key": {
+                  "load_from_db": true,
+                  "required": true,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "google_api_key",
+                  "value": "",
+                  "display_name": "Google API Key",
+                  "advanced": false,
+                  "input_types": [
+                    "Message"
+                  ],
+                  "dynamic": false,
+                  "info": "",
+                  "title_case": false,
+                  "password": true,
+                  "type": "str",
+                  "_input_type": "SecretStrInput"
+                },
+                "google_cse_id": {
+                  "load_from_db": true,
+                  "required": true,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "google_cse_id",
+                  "value": "",
+                  "display_name": "Google CSE ID",
+                  "advanced": false,
+                  "input_types": [
+                    "Message"
+                  ],
+                  "dynamic": false,
+                  "info": "",
+                  "title_case": false,
+                  "password": true,
+                  "type": "str",
+                  "_input_type": "SecretStrInput"
+                },
+                "input_value": {
+                  "tool_mode": true,
+                  "trace_as_input": true,
+                  "multiline": true,
+                  "trace_as_metadata": true,
+                  "load_from_db": false,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "input_value",
+                  "value": "",
+                  "display_name": "Input",
+                  "advanced": false,
+                  "input_types": [
+                    "Message"
+                  ],
+                  "dynamic": false,
+                  "info": "",
+                  "title_case": false,
+                  "type": "str",
+                  "_input_type": "MultilineInput"
+                },
+                "k": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": true,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "k",
+                  "value": 4,
+                  "display_name": "Number of results",
+                  "advanced": false,
+                  "dynamic": false,
+                  "info": "",
+                  "title_case": false,
+                  "type": "int",
+                  "_input_type": "IntInput"
+                },
+                "tools_metadata": {
+                  "tool_mode": false,
+                  "is_list": true,
+                  "list_add_label": "Add More",
+                  "table_schema": {
+                    "columns": [
+                      {
+                        "name": "name",
+                        "display_name": "Tool Name",
+                        "sortable": false,
+                        "filterable": false,
+                        "formatter": "text",
+                        "type": "str",
+                        "description": "Specify the name of the tool.",
+                        "default": "None",
+                        "disable_edit": false,
+                        "edit_mode": "inline",
+                        "hidden": false
+                      },
+                      {
+                        "name": "description",
+                        "display_name": "Tool Description",
+                        "sortable": false,
+                        "filterable": false,
+                        "formatter": "text",
+                        "type": "str",
+                        "description": "Describe the purpose of the tool.",
+                        "default": "None",
+                        "disable_edit": false,
+                        "edit_mode": "popover",
+                        "hidden": false
+                      },
+                      {
+                        "name": "tags",
+                        "display_name": "Tool Identifiers",
+                        "sortable": false,
+                        "filterable": false,
+                        "formatter": "text",
+                        "type": "str",
+                        "description": "The default identifiers for the tools and cannot be changed.",
+                        "default": "None",
+                        "disable_edit": true,
+                        "edit_mode": "inline",
+                        "hidden": true
+                      }
+                    ]
+                  },
+                  "trigger_text": "",
+                  "trigger_icon": "Hammer",
+                  "table_icon": "Hammer",
+                  "table_options": {
+                    "block_add": true,
+                    "block_delete": true,
+                    "block_edit": true,
+                    "block_sort": true,
+                    "block_filter": true,
+                    "block_hide": true,
+                    "block_select": true,
+                    "hide_options": true,
+                    "field_parsers": {
+                      "name": [
+                        "snake_case",
+                        "no_blank"
+                      ],
+                      "commands": "commands"
+                    },
+                    "description": "Modify tool names and descriptions to help agents understand when to use each tool."
+                  },
+                  "trace_as_metadata": true,
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "tools_metadata",
+                  "value": [
+                    {
+                      "name": "GoogleSearchAPICore-search_google",
+                      "description": "search_google(google_api_key: Message, google_cse_id: Message, k: FieldTypes.INTEGER) - Call Google Search API and return results as a DataFrame.",
+                      "tags": [
+                        "GoogleSearchAPICore-search_google"
+                      ]
+                    }
+                  ],
+                  "display_name": "Edit tools",
+                  "advanced": false,
+                  "dynamic": false,
+                  "info": "",
+                  "real_time_refresh": true,
+                  "title_case": false,
+                  "type": "table",
+                  "_input_type": "TableInput"
+                }
+              },
+              "description": "Call Google Search API and return results as a DataFrame.",
+              "icon": "Google",
+              "base_classes": [
+                "DataFrame"
+              ],
+              "display_name": "Google Search API",
+              "documentation": "",
+              "minimized": false,
+              "custom_fields": {},
+              "output_types": [],
+              "pinned": false,
+              "conditional_paths": [],
+              "frozen": false,
+              "outputs": [
+                {
+                  "types": [
+                    "Tool"
+                  ],
+                  "selected": "Tool",
+                  "name": "component_as_tool",
+                  "hidden": null,
+                  "display_name": "Toolset",
+                  "method": "to_toolkit",
+                  "value": "__UNDEFINED__",
+                  "cache": true,
+                  "required_inputs": null,
+                  "allows_loop": false,
+                  "tool_mode": true
+                }
+              ],
+              "field_order": [
+                "google_api_key",
+                "google_cse_id",
+                "input_value",
+                "k"
+              ],
+              "beta": false,
+              "legacy": false,
+              "edited": false,
+              "metadata": {},
+              "tool_mode": true,
+              "lf_version": "1.2.0"
+            },
+            "showNode": true,
+            "type": "GoogleSearchAPICore",
+            "id": "GoogleSearchAPICore-YlfSJ"
+          },
+          "selected": false,
+          "measured": {
+            "width": 320,
+            "height": 584
+          },
+          "dragging": false
+        },
+        {
+          "id": "NotionDatabaseProperties-UuHFD",
+          "type": "genericNode",
+          "position": {
+            "x": 1273.808092648147,
+            "y": 1187.5369548568651
+          },
+          "data": {
+            "node": {
+              "template": {
+                "_type": "Component",
+                "code": {
+                  "type": "code",
+                  "required": true,
+                  "placeholder": "",
+                  "list": false,
+                  "show": true,
+                  "multiline": true,
+                  "value": "import requests\nfrom langchain.tools import StructuredTool\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import SecretStrInput, StrInput\nfrom langflow.schema import Data\n\n\nclass NotionDatabaseProperties(LCToolComponent):\n    display_name: str = \"List Database Properties \"\n    description: str = \"Retrieve properties of a Notion database.\"\n    documentation: str = \"https://docs.langflow.org/integrations/notion/list-database-properties\"\n    icon = \"NotionDirectoryLoader\"\n\n    inputs = [\n        StrInput(\n            name=\"database_id\",\n            display_name=\"Database ID\",\n            info=\"The ID of the Notion database.\",\n        ),\n        SecretStrInput(\n            name=\"notion_secret\",\n            display_name=\"Notion Secret\",\n            info=\"The Notion integration token.\",\n            required=True,\n        ),\n    ]\n\n    class NotionDatabasePropertiesSchema(BaseModel):\n        database_id: str = Field(..., description=\"The ID of the Notion database.\")\n\n    def run_model(self) -> Data:\n        result = self._fetch_database_properties(self.database_id)\n        if isinstance(result, str):\n            # An error occurred, return it as text\n            return Data(text=result)\n        # Success, return the properties\n        return Data(text=str(result), data=result)\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"notion_database_properties\",\n            description=\"Retrieve properties of a Notion database. Input should include the database ID.\",\n            func=self._fetch_database_properties,\n            args_schema=self.NotionDatabasePropertiesSchema,\n        )\n\n    def _fetch_database_properties(self, database_id: str) -> dict | str:\n        url = f\"https://api.notion.com/v1/databases/{database_id}\"\n        headers = {\n            \"Authorization\": f\"Bearer {self.notion_secret}\",\n            \"Notion-Version\": \"2022-06-28\",  # Use the latest supported version\n        }\n        try:\n            response = requests.get(url, headers=headers, timeout=10)\n            response.raise_for_status()\n            data = response.json()\n            return data.get(\"properties\", {})\n        except requests.exceptions.RequestException as e:\n            return f\"Error fetching Notion database properties: {e}\"\n        except ValueError as e:\n            return f\"Error parsing Notion API response: {e}\"\n        except Exception as e:  # noqa: BLE001\n            logger.opt(exception=True).debug(\"Error fetching Notion database properties\")\n            return f\"An unexpected error occurred: {e}\"\n",
+                  "fileTypes": [],
+                  "file_path": "",
+                  "password": false,
+                  "name": "code",
+                  "advanced": true,
+                  "dynamic": true,
+                  "info": "",
+                  "load_from_db": false,
+                  "title_case": false
+                },
+                "database_id": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "load_from_db": false,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "database_id",
+                  "value": "",
+                  "display_name": "Database ID",
+                  "advanced": false,
+                  "dynamic": false,
+                  "info": "The ID of the Notion database.",
+                  "title_case": false,
+                  "type": "str",
+                  "_input_type": "StrInput"
+                },
+                "notion_secret": {
+                  "load_from_db": true,
+                  "required": true,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "notion_secret",
+                  "value": "",
+                  "display_name": "Notion Secret",
+                  "advanced": false,
+                  "input_types": [
+                    "Message"
+                  ],
+                  "dynamic": false,
+                  "info": "The Notion integration token.",
+                  "title_case": false,
+                  "password": true,
+                  "type": "str",
+                  "_input_type": "SecretStrInput"
+                }
+              },
+              "description": "Retrieve properties of a Notion database.",
+              "icon": "NotionDirectoryLoader",
+              "base_classes": [
+                "Data",
+                "Tool"
+              ],
+              "display_name": "List Database Properties ",
+              "documentation": "https://docs.langflow.org/integrations/notion/list-database-properties",
+              "minimized": false,
+              "custom_fields": {},
+              "output_types": [],
+              "pinned": false,
+              "conditional_paths": [],
+              "frozen": false,
+              "outputs": [
+                {
+                  "types": [
+                    "Data"
+                  ],
+                  "selected": "Data",
+                  "name": "api_run_model",
+                  "display_name": "Data",
+                  "method": "run_model",
+                  "value": "__UNDEFINED__",
+                  "cache": true,
+                  "required_inputs": [
+                    "notion_secret"
+                  ],
+                  "allows_loop": false,
+                  "tool_mode": true
+                },
+                {
+                  "types": [
+                    "Tool"
+                  ],
+                  "selected": "Tool",
+                  "name": "api_build_tool",
+                  "display_name": "Tool",
+                  "method": "build_tool",
+                  "value": "__UNDEFINED__",
+                  "cache": true,
+                  "required_inputs": [
+                    "notion_secret"
+                  ],
+                  "allows_loop": false,
+                  "tool_mode": true
+                }
+              ],
+              "field_order": [
+                "database_id",
+                "notion_secret"
+              ],
+              "beta": false,
+              "legacy": false,
+              "edited": false,
+              "metadata": {},
+              "tool_mode": false
+            },
+            "showNode": true,
+            "type": "NotionDatabaseProperties",
+            "id": "NotionDatabaseProperties-UuHFD"
+          },
+          "selected": false,
+          "measured": {
+            "width": 320,
+            "height": 361
+          },
+          "dragging": false
+        },
+        {
+          "id": "NotionListPages-DMnus",
+          "type": "genericNode",
+          "position": {
+            "x": 1623.7967035746517,
+            "y": 267.0418091632738
+          },
+          "data": {
+            "node": {
+              "template": {
+                "_type": "Component",
+                "code": {
+                  "type": "code",
+                  "required": true,
+                  "placeholder": "",
+                  "list": false,
+                  "show": true,
+                  "multiline": true,
+                  "value": "import json\nfrom typing import Any\n\nimport requests\nfrom langchain.tools import StructuredTool\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import MultilineInput, SecretStrInput, StrInput\nfrom langflow.schema import Data\n\n\nclass NotionListPages(LCToolComponent):\n    display_name: str = \"List Pages \"\n    description: str = (\n        \"Query a Notion database with filtering and sorting. \"\n        \"The input should be a JSON string containing the 'filter' and 'sorts' objects. \"\n        \"Example input:\\n\"\n        '{\"filter\": {\"property\": \"Status\", \"select\": {\"equals\": \"Done\"}}, '\n        '\"sorts\": [{\"timestamp\": \"created_time\", \"direction\": \"descending\"}]}'\n    )\n    documentation: str = \"https://docs.langflow.org/integrations/notion/list-pages\"\n    icon = \"NotionDirectoryLoader\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"notion_secret\",\n            display_name=\"Notion Secret\",\n            info=\"The Notion integration token.\",\n            required=True,\n        ),\n        StrInput(\n            name=\"database_id\",\n            display_name=\"Database ID\",\n            info=\"The ID of the Notion database to query.\",\n        ),\n        MultilineInput(\n            name=\"query_json\",\n            display_name=\"Database query (JSON)\",\n            info=\"A JSON string containing the filters and sorts that will be used for querying the database. \"\n            \"Leave empty for no filters or sorts.\",\n        ),\n    ]\n\n    class NotionListPagesSchema(BaseModel):\n        database_id: str = Field(..., description=\"The ID of the Notion database to query.\")\n        query_json: str | None = Field(\n            default=\"\",\n            description=\"A JSON string containing the filters and sorts for querying the database. \"\n            \"Leave empty for no filters or sorts.\",\n        )\n\n    def run_model(self) -> list[Data]:\n        result = self._query_notion_database(self.database_id, self.query_json)\n\n        if isinstance(result, str):\n            # An error occurred, return it as a single record\n            return [Data(text=result)]\n\n        records = []\n        combined_text = f\"Pages found: {len(result)}\\n\\n\"\n\n        for page in result:\n            page_data = {\n                \"id\": page[\"id\"],\n                \"url\": page[\"url\"],\n                \"created_time\": page[\"created_time\"],\n                \"last_edited_time\": page[\"last_edited_time\"],\n                \"properties\": page[\"properties\"],\n            }\n\n            text = (\n                f\"id: {page['id']}\\n\"\n                f\"url: {page['url']}\\n\"\n                f\"created_time: {page['created_time']}\\n\"\n                f\"last_edited_time: {page['last_edited_time']}\\n\"\n                f\"properties: {json.dumps(page['properties'], indent=2)}\\n\\n\"\n            )\n\n            combined_text += text\n            records.append(Data(text=text, **page_data))\n\n        self.status = records\n        return records\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"notion_list_pages\",\n            description=self.description,\n            func=self._query_notion_database,\n            args_schema=self.NotionListPagesSchema,\n        )\n\n    def _query_notion_database(self, database_id: str, query_json: str | None = None) -> list[dict[str, Any]] | str:\n        url = f\"https://api.notion.com/v1/databases/{database_id}/query\"\n        headers = {\n            \"Authorization\": f\"Bearer {self.notion_secret}\",\n            \"Content-Type\": \"application/json\",\n            \"Notion-Version\": \"2022-06-28\",\n        }\n\n        query_payload = {}\n        if query_json and query_json.strip():\n            try:\n                query_payload = json.loads(query_json)\n            except json.JSONDecodeError as e:\n                return f\"Invalid JSON format for query: {e}\"\n\n        try:\n            response = requests.post(url, headers=headers, json=query_payload, timeout=10)\n            response.raise_for_status()\n            results = response.json()\n            return results[\"results\"]\n        except requests.exceptions.RequestException as e:\n            return f\"Error querying Notion database: {e}\"\n        except KeyError:\n            return \"Unexpected response format from Notion API\"\n        except Exception as e:  # noqa: BLE001\n            logger.opt(exception=True).debug(\"Error querying Notion database\")\n            return f\"An unexpected error occurred: {e}\"\n",
+                  "fileTypes": [],
+                  "file_path": "",
+                  "password": false,
+                  "name": "code",
+                  "advanced": true,
+                  "dynamic": true,
+                  "info": "",
+                  "load_from_db": false,
+                  "title_case": false
+                },
+                "database_id": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "load_from_db": false,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "database_id",
+                  "value": "",
+                  "display_name": "Database ID",
+                  "advanced": false,
+                  "dynamic": false,
+                  "info": "The ID of the Notion database to query.",
+                  "title_case": false,
+                  "type": "str",
+                  "_input_type": "StrInput"
+                },
+                "notion_secret": {
+                  "load_from_db": true,
+                  "required": true,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "notion_secret",
+                  "value": "",
+                  "display_name": "Notion Secret",
+                  "advanced": false,
+                  "input_types": [
+                    "Message"
+                  ],
+                  "dynamic": false,
+                  "info": "The Notion integration token.",
+                  "title_case": false,
+                  "password": true,
+                  "type": "str",
+                  "_input_type": "SecretStrInput"
+                },
+                "query_json": {
+                  "tool_mode": false,
+                  "trace_as_input": true,
+                  "multiline": true,
+                  "trace_as_metadata": true,
+                  "load_from_db": false,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "query_json",
+                  "value": "",
+                  "display_name": "Database query (JSON)",
+                  "advanced": false,
+                  "input_types": [
+                    "Message"
+                  ],
+                  "dynamic": false,
+                  "info": "A JSON string containing the filters and sorts that will be used for querying the database. Leave empty for no filters or sorts.",
+                  "title_case": false,
+                  "type": "str",
+                  "_input_type": "MultilineInput"
+                }
+              },
+              "description": "Query a Notion database with filtering and sorting. The input should be a JSON string containing the 'filter' and 'sorts' objects. Example input:\n{\"filter\": {\"property\": \"Status\", \"select\": {\"equals\": \"Done\"}}, \"sorts\": [{\"timestamp\": \"created_time\", \"direction\": \"descending\"}]}",
+              "icon": "NotionDirectoryLoader",
+              "base_classes": [
+                "Data",
+                "Tool"
+              ],
+              "display_name": "List Pages ",
+              "documentation": "https://docs.langflow.org/integrations/notion/list-pages",
+              "minimized": false,
+              "custom_fields": {},
+              "output_types": [],
+              "pinned": false,
+              "conditional_paths": [],
+              "frozen": false,
+              "outputs": [
+                {
+                  "types": [
+                    "Data"
+                  ],
+                  "selected": "Data",
+                  "name": "api_run_model",
+                  "display_name": "Data",
+                  "method": "run_model",
+                  "value": "__UNDEFINED__",
+                  "cache": true,
+                  "required_inputs": [
+                    "notion_secret"
+                  ],
+                  "allows_loop": false,
+                  "tool_mode": true
+                },
+                {
+                  "types": [
+                    "Tool"
+                  ],
+                  "selected": "Tool",
+                  "name": "api_build_tool",
+                  "display_name": "Tool",
+                  "method": "build_tool",
+                  "value": "__UNDEFINED__",
+                  "cache": true,
+                  "required_inputs": [
+                    "notion_secret"
+                  ],
+                  "allows_loop": false,
+                  "tool_mode": true
+                }
+              ],
+              "field_order": [
+                "notion_secret",
+                "database_id",
+                "query_json"
+              ],
+              "beta": false,
+              "legacy": false,
+              "edited": false,
+              "metadata": {},
+              "tool_mode": false
+            },
+            "showNode": true,
+            "type": "NotionListPages",
+            "id": "NotionListPages-DMnus"
+          },
+          "selected": false,
+          "measured": {
+            "width": 320,
+            "height": 564
+          },
+          "dragging": false
+        },
+        {
+          "id": "NotionPageContent-ZE8Fc",
+          "type": "genericNode",
+          "position": {
+            "x": 1628.6263352385592,
+            "y": 878.4874811659992
+          },
+          "data": {
+            "node": {
+              "template": {
+                "_type": "Component",
+                "code": {
+                  "type": "code",
+                  "required": true,
+                  "placeholder": "",
+                  "list": false,
+                  "show": true,
+                  "multiline": true,
+                  "value": "import requests\nfrom langchain.tools import StructuredTool\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import SecretStrInput, StrInput\nfrom langflow.schema import Data\n\n\nclass NotionPageContent(LCToolComponent):\n    display_name = \"Page Content Viewer \"\n    description = \"Retrieve the content of a Notion page as plain text.\"\n    documentation = \"https://docs.langflow.org/integrations/notion/page-content-viewer\"\n    icon = \"NotionDirectoryLoader\"\n\n    inputs = [\n        StrInput(\n            name=\"page_id\",\n            display_name=\"Page ID\",\n            info=\"The ID of the Notion page to retrieve.\",\n        ),\n        SecretStrInput(\n            name=\"notion_secret\",\n            display_name=\"Notion Secret\",\n            info=\"The Notion integration token.\",\n            required=True,\n        ),\n    ]\n\n    class NotionPageContentSchema(BaseModel):\n        page_id: str = Field(..., description=\"The ID of the Notion page to retrieve.\")\n\n    def run_model(self) -> Data:\n        result = self._retrieve_page_content(self.page_id)\n        if isinstance(result, str) and result.startswith(\"Error:\"):\n            # An error occurred, return it as text\n            return Data(text=result)\n        # Success, return the content\n        return Data(text=result, data={\"content\": result})\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"notion_page_content\",\n            description=\"Retrieve the content of a Notion page as plain text.\",\n            func=self._retrieve_page_content,\n            args_schema=self.NotionPageContentSchema,\n        )\n\n    def _retrieve_page_content(self, page_id: str) -> str:\n        blocks_url = f\"https://api.notion.com/v1/blocks/{page_id}/children?page_size=100\"\n        headers = {\n            \"Authorization\": f\"Bearer {self.notion_secret}\",\n            \"Notion-Version\": \"2022-06-28\",\n        }\n        try:\n            blocks_response = requests.get(blocks_url, headers=headers, timeout=10)\n            blocks_response.raise_for_status()\n            blocks_data = blocks_response.json()\n            return self.parse_blocks(blocks_data.get(\"results\", []))\n        except requests.exceptions.RequestException as e:\n            error_message = f\"Error: Failed to retrieve Notion page content. {e}\"\n            if hasattr(e, \"response\") and e.response is not None:\n                error_message += f\" Status code: {e.response.status_code}, Response: {e.response.text}\"\n            return error_message\n        except Exception as e:  # noqa: BLE001\n            logger.opt(exception=True).debug(\"Error retrieving Notion page content\")\n            return f\"Error: An unexpected error occurred while retrieving Notion page content. {e}\"\n\n    def parse_blocks(self, blocks: list) -> str:\n        content = \"\"\n        for block in blocks:\n            block_type = block.get(\"type\")\n            if block_type in {\"paragraph\", \"heading_1\", \"heading_2\", \"heading_3\", \"quote\"}:\n                content += self.parse_rich_text(block[block_type].get(\"rich_text\", [])) + \"\\n\\n\"\n            elif block_type in {\"bulleted_list_item\", \"numbered_list_item\"}:\n                content += self.parse_rich_text(block[block_type].get(\"rich_text\", [])) + \"\\n\"\n            elif block_type == \"to_do\":\n                content += self.parse_rich_text(block[\"to_do\"].get(\"rich_text\", [])) + \"\\n\"\n            elif block_type == \"code\":\n                content += self.parse_rich_text(block[\"code\"].get(\"rich_text\", [])) + \"\\n\\n\"\n            elif block_type == \"image\":\n                content += f\"[Image: {block['image'].get('external', {}).get('url', 'No URL')}]\\n\\n\"\n            elif block_type == \"divider\":\n                content += \"---\\n\\n\"\n        return content.strip()\n\n    def parse_rich_text(self, rich_text: list) -> str:\n        return \"\".join(segment.get(\"plain_text\", \"\") for segment in rich_text)\n\n    def __call__(self, *args, **kwargs):\n        return self._retrieve_page_content(*args, **kwargs)\n",
+                  "fileTypes": [],
+                  "file_path": "",
+                  "password": false,
+                  "name": "code",
+                  "advanced": true,
+                  "dynamic": true,
+                  "info": "",
+                  "load_from_db": false,
+                  "title_case": false
+                },
+                "notion_secret": {
+                  "load_from_db": true,
+                  "required": true,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "notion_secret",
+                  "value": "",
+                  "display_name": "Notion Secret",
+                  "advanced": false,
+                  "input_types": [
+                    "Message"
+                  ],
+                  "dynamic": false,
+                  "info": "The Notion integration token.",
+                  "title_case": false,
+                  "password": true,
+                  "type": "str",
+                  "_input_type": "SecretStrInput"
+                },
+                "page_id": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "load_from_db": false,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "page_id",
+                  "value": "",
+                  "display_name": "Page ID",
+                  "advanced": false,
+                  "dynamic": false,
+                  "info": "The ID of the Notion page to retrieve.",
+                  "title_case": false,
+                  "type": "str",
+                  "_input_type": "StrInput"
+                }
+              },
+              "description": "Retrieve the content of a Notion page as plain text.",
+              "icon": "NotionDirectoryLoader",
+              "base_classes": [
+                "Data",
+                "Tool"
+              ],
+              "display_name": "Page Content Viewer ",
+              "documentation": "https://docs.langflow.org/integrations/notion/page-content-viewer",
+              "minimized": false,
+              "custom_fields": {},
+              "output_types": [],
+              "pinned": false,
+              "conditional_paths": [],
+              "frozen": false,
+              "outputs": [
+                {
+                  "types": [
+                    "Data"
+                  ],
+                  "selected": "Data",
+                  "name": "api_run_model",
+                  "display_name": "Data",
+                  "method": "run_model",
+                  "value": "__UNDEFINED__",
+                  "cache": true,
+                  "required_inputs": [
+                    "notion_secret"
+                  ],
+                  "allows_loop": false,
+                  "tool_mode": true
+                },
+                {
+                  "types": [
+                    "Tool"
+                  ],
+                  "selected": "Tool",
+                  "name": "api_build_tool",
+                  "display_name": "Tool",
+                  "method": "build_tool",
+                  "value": "__UNDEFINED__",
+                  "cache": true,
+                  "required_inputs": [
+                    "notion_secret"
+                  ],
+                  "allows_loop": false,
+                  "tool_mode": true
+                }
+              ],
+              "field_order": [
+                "page_id",
+                "notion_secret"
+              ],
+              "beta": false,
+              "legacy": false,
+              "edited": false,
+              "metadata": {},
+              "tool_mode": false
+            },
+            "showNode": true,
+            "type": "NotionPageContent",
+            "id": "NotionPageContent-ZE8Fc"
+          },
+          "selected": false,
+          "measured": {
+            "width": 320,
+            "height": 381
+          },
+          "dragging": false
+        },
+        {
+          "id": "NotionSearch-G9hif",
+          "type": "genericNode",
+          "position": {
+            "x": 1266.6354004507712,
+            "y": 606.8567587522796
+          },
+          "data": {
+            "node": {
+              "template": {
+                "_type": "Component",
+                "code": {
+                  "type": "code",
+                  "required": true,
+                  "placeholder": "",
+                  "list": false,
+                  "show": true,
+                  "multiline": true,
+                  "value": "from typing import Any\n\nimport requests\nfrom langchain.tools import StructuredTool\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import DropdownInput, SecretStrInput, StrInput\nfrom langflow.schema import Data\n\n\nclass NotionSearch(LCToolComponent):\n    display_name: str = \"Search \"\n    description: str = \"Searches all pages and databases that have been shared with an integration.\"\n    documentation: str = \"https://docs.langflow.org/integrations/notion/search\"\n    icon = \"NotionDirectoryLoader\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"notion_secret\",\n            display_name=\"Notion Secret\",\n            info=\"The Notion integration token.\",\n            required=True,\n        ),\n        StrInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The text that the API compares page and database titles against.\",\n        ),\n        DropdownInput(\n            name=\"filter_value\",\n            display_name=\"Filter Type\",\n            info=\"Limits the results to either only pages or only databases.\",\n            options=[\"page\", \"database\"],\n            value=\"page\",\n        ),\n        DropdownInput(\n            name=\"sort_direction\",\n            display_name=\"Sort Direction\",\n            info=\"The direction to sort the results.\",\n            options=[\"ascending\", \"descending\"],\n            value=\"descending\",\n        ),\n    ]\n\n    class NotionSearchSchema(BaseModel):\n        query: str = Field(..., description=\"The search query text.\")\n        filter_value: str = Field(default=\"page\", description=\"Filter type: 'page' or 'database'.\")\n        sort_direction: str = Field(default=\"descending\", description=\"Sort direction: 'ascending' or 'descending'.\")\n\n    def run_model(self) -> list[Data]:\n        results = self._search_notion(self.query, self.filter_value, self.sort_direction)\n        records = []\n        combined_text = f\"Results found: {len(results)}\\n\\n\"\n\n        for result in results:\n            result_data = {\n                \"id\": result[\"id\"],\n                \"type\": result[\"object\"],\n                \"last_edited_time\": result[\"last_edited_time\"],\n            }\n\n            if result[\"object\"] == \"page\":\n                result_data[\"title_or_url\"] = result[\"url\"]\n                text = f\"id: {result['id']}\\ntitle_or_url: {result['url']}\\n\"\n            elif result[\"object\"] == \"database\":\n                if \"title\" in result and isinstance(result[\"title\"], list) and len(result[\"title\"]) > 0:\n                    result_data[\"title_or_url\"] = result[\"title\"][0][\"plain_text\"]\n                    text = f\"id: {result['id']}\\ntitle_or_url: {result['title'][0]['plain_text']}\\n\"\n                else:\n                    result_data[\"title_or_url\"] = \"N/A\"\n                    text = f\"id: {result['id']}\\ntitle_or_url: N/A\\n\"\n\n            text += f\"type: {result['object']}\\nlast_edited_time: {result['last_edited_time']}\\n\\n\"\n            combined_text += text\n            records.append(Data(text=text, data=result_data))\n\n        self.status = records\n        return records\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"notion_search\",\n            description=\"Search Notion pages and databases. \"\n            \"Input should include the search query and optionally filter type and sort direction.\",\n            func=self._search_notion,\n            args_schema=self.NotionSearchSchema,\n        )\n\n    def _search_notion(\n        self, query: str, filter_value: str = \"page\", sort_direction: str = \"descending\"\n    ) -> list[dict[str, Any]]:\n        url = \"https://api.notion.com/v1/search\"\n        headers = {\n            \"Authorization\": f\"Bearer {self.notion_secret}\",\n            \"Content-Type\": \"application/json\",\n            \"Notion-Version\": \"2022-06-28\",\n        }\n\n        data = {\n            \"query\": query,\n            \"filter\": {\"value\": filter_value, \"property\": \"object\"},\n            \"sort\": {\"direction\": sort_direction, \"timestamp\": \"last_edited_time\"},\n        }\n\n        response = requests.post(url, headers=headers, json=data, timeout=10)\n        response.raise_for_status()\n\n        results = response.json()\n        return results[\"results\"]\n",
+                  "fileTypes": [],
+                  "file_path": "",
+                  "password": false,
+                  "name": "code",
+                  "advanced": true,
+                  "dynamic": true,
+                  "info": "",
+                  "load_from_db": false,
+                  "title_case": false
+                },
+                "filter_value": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "options": [
+                    "page",
+                    "database"
+                  ],
+                  "options_metadata": [],
+                  "combobox": false,
+                  "dialog_inputs": {},
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "filter_value",
+                  "value": "page",
+                  "display_name": "Filter Type",
+                  "advanced": false,
+                  "dynamic": false,
+                  "info": "Limits the results to either only pages or only databases.",
+                  "title_case": false,
+                  "type": "str",
+                  "_input_type": "DropdownInput"
+                },
+                "notion_secret": {
+                  "load_from_db": true,
+                  "required": true,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "notion_secret",
+                  "value": "",
+                  "display_name": "Notion Secret",
+                  "advanced": false,
+                  "input_types": [
+                    "Message"
+                  ],
+                  "dynamic": false,
+                  "info": "The Notion integration token.",
+                  "title_case": false,
+                  "password": true,
+                  "type": "str",
+                  "_input_type": "SecretStrInput"
+                },
+                "query": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "load_from_db": false,
+                  "list": false,
+                  "list_add_label": "Add More",
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "query",
+                  "value": "",
+                  "display_name": "Search Query",
+                  "advanced": false,
+                  "dynamic": false,
+                  "info": "The text that the API compares page and database titles against.",
+                  "title_case": false,
+                  "type": "str",
+                  "_input_type": "StrInput"
+                },
+                "sort_direction": {
+                  "tool_mode": false,
+                  "trace_as_metadata": true,
+                  "options": [
+                    "ascending",
+                    "descending"
+                  ],
+                  "options_metadata": [],
+                  "combobox": false,
+                  "dialog_inputs": {},
+                  "required": false,
+                  "placeholder": "",
+                  "show": true,
+                  "name": "sort_direction",
+                  "value": "descending",
+                  "display_name": "Sort Direction",
+                  "advanced": false,
+                  "dynamic": false,
+                  "info": "The direction to sort the results.",
+                  "title_case": false,
+                  "type": "str",
+                  "_input_type": "DropdownInput"
+                }
+              },
+              "description": "Searches all pages and databases that have been shared with an integration.",
+              "icon": "NotionDirectoryLoader",
+              "base_classes": [
+                "Data",
+                "Tool"
+              ],
+              "display_name": "Search ",
+              "documentation": "https://docs.langflow.org/integrations/notion/search",
+              "minimized": false,
+              "custom_fields": {},
+              "output_types": [],
+              "pinned": false,
+              "conditional_paths": [],
+              "frozen": false,
+              "outputs": [
+                {
+                  "types": [
+                    "Data"
+                  ],
+                  "selected": "Data",
+                  "name": "api_run_model",
+                  "display_name": "Data",
+                  "method": "run_model",
+                  "value": "__UNDEFINED__",
+                  "cache": true,
+                  "required_inputs": [
+                    "notion_secret"
+                  ],
+                  "allows_loop": false,
+                  "tool_mode": true
+                },
+                {
+                  "types": [
+                    "Tool"
+                  ],
+                  "selected": "Tool",
+                  "name": "api_build_tool",
+                  "display_name": "Tool",
+                  "method": "build_tool",
+                  "value": "__UNDEFINED__",
+                  "cache": true,
+                  "required_inputs": [
+                    "notion_secret"
+                  ],
+                  "allows_loop": false,
+                  "tool_mode": true
+                }
+              ],
+              "field_order": [
+                "notion_secret",
+                "query",
+                "filter_value",
+                "sort_direction"
+              ],
+              "beta": false,
+              "legacy": false,
+              "edited": false,
+              "metadata": {},
+              "tool_mode": false
+            },
+            "showNode": true,
+            "type": "NotionSearch",
+            "id": "NotionSearch-G9hif"
+          },
+          "selected": false,
+          "measured": {
+            "width": 320,
+            "height": 547
+          },
+          "dragging": false
+        }
+      ],
+      "edges": [
+        {
+          "animated": false,
+          "className": "",
+          "data": {
+            "sourceHandle": {
+              "dataType": "ChatInput",
+              "id": "ChatInput-JtmvH",
+              "name": "message",
+              "output_types": [
+                "Message"
+              ]
+            },
+            "targetHandle": {
+              "fieldName": "input_value",
+              "id": "Agent-bgdOO",
+              "inputTypes": [
+                "Message"
+              ],
+              "type": "str"
+            }
+          },
+          "id": "reactflow__edge-ChatInput-JtmvH{ÅdataTypeÅ:ÅChatInputÅ,ÅidÅ:ÅChatInput-JtmvHÅ,ÅnameÅ:ÅmessageÅ,Åoutput_typesÅ:[ÅMessageÅ]}-Agent-bgdOO{ÅfieldNameÅ:Åinput_valueÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅMessageÅ],ÅtypeÅ:ÅstrÅ}",
+          "selected": false,
+          "source": "ChatInput-JtmvH",
+          "sourceHandle": "{ÅdataTypeÅ:ÅChatInputÅ,ÅidÅ:ÅChatInput-JtmvHÅ,ÅnameÅ:ÅmessageÅ,Åoutput_typesÅ:[ÅMessageÅ]}",
+          "target": "Agent-bgdOO",
+          "targetHandle": "{ÅfieldNameÅ:Åinput_valueÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅMessageÅ],ÅtypeÅ:ÅstrÅ}"
+        },
+        {
+          "className": "",
+          "data": {
+            "sourceHandle": {
+              "dataType": "CalculatorComponent",
+              "id": "CalculatorComponent-SxXta",
+              "name": "component_as_tool",
+              "output_types": [
+                "Tool"
+              ]
+            },
+            "targetHandle": {
+              "fieldName": "tools",
+              "id": "Agent-bgdOO",
+              "inputTypes": [
+                "Tool"
+              ],
+              "type": "other"
+            }
+          },
+          "id": "reactflow__edge-CalculatorComponent-SxXta{ÅdataTypeÅ:ÅCalculatorComponentÅ,ÅidÅ:ÅCalculatorComponent-SxXtaÅ,ÅnameÅ:Åcomponent_as_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}-Agent-bgdOO{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}",
+          "source": "CalculatorComponent-SxXta",
+          "sourceHandle": "{ÅdataTypeÅ:ÅCalculatorComponentÅ,ÅidÅ:ÅCalculatorComponent-SxXtaÅ,ÅnameÅ:Åcomponent_as_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}",
+          "target": "Agent-bgdOO",
+          "targetHandle": "{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}",
+          "animated": false,
+          "selected": false
+        },
+        {
+          "className": "",
+          "data": {
+            "sourceHandle": {
+              "dataType": "URL",
+              "id": "URL-9kykP",
+              "name": "component_as_tool",
+              "output_types": [
+                "Tool"
+              ]
+            },
+            "targetHandle": {
+              "fieldName": "tools",
+              "id": "Agent-bgdOO",
+              "inputTypes": [
+                "Tool"
+              ],
+              "type": "other"
+            }
+          },
+          "id": "reactflow__edge-URL-9kykP{ÅdataTypeÅ:ÅURLÅ,ÅidÅ:ÅURL-9kykPÅ,ÅnameÅ:Åcomponent_as_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}-Agent-bgdOO{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}",
+          "source": "URL-9kykP",
+          "sourceHandle": "{ÅdataTypeÅ:ÅURLÅ,ÅidÅ:ÅURL-9kykPÅ,ÅnameÅ:Åcomponent_as_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}",
+          "target": "Agent-bgdOO",
+          "targetHandle": "{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}",
+          "animated": false,
+          "selected": false
+        },
+        {
+          "source": "WikipediaComponent-vTyL6",
+          "sourceHandle": "{ÅdataTypeÅ:ÅWikipediaComponentÅ,ÅidÅ:ÅWikipediaComponent-vTyL6Å,ÅnameÅ:Åcomponent_as_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}",
+          "target": "Agent-bgdOO",
+          "targetHandle": "{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}",
+          "data": {
+            "targetHandle": {
+              "fieldName": "tools",
+              "id": "Agent-bgdOO",
+              "inputTypes": [
+                "Tool"
+              ],
+              "type": "other"
+            },
+            "sourceHandle": {
+              "dataType": "WikipediaComponent",
+              "id": "WikipediaComponent-vTyL6",
+              "name": "component_as_tool",
+              "output_types": [
+                "Tool"
+              ]
+            }
+          },
+          "id": "xy-edge__WikipediaComponent-vTyL6{ÅdataTypeÅ:ÅWikipediaComponentÅ,ÅidÅ:ÅWikipediaComponent-vTyL6Å,ÅnameÅ:Åcomponent_as_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}-Agent-bgdOO{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}",
+          "className": "",
+          "animated": false,
+          "selected": false
+        },
+        {
+          "source": "GoogleSearchAPICore-YlfSJ",
+          "sourceHandle": "{ÅdataTypeÅ:ÅGoogleSearchAPICoreÅ,ÅidÅ:ÅGoogleSearchAPICore-YlfSJÅ,ÅnameÅ:Åcomponent_as_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}",
+          "target": "Agent-bgdOO",
+          "targetHandle": "{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}",
+          "data": {
+            "targetHandle": {
+              "fieldName": "tools",
+              "id": "Agent-bgdOO",
+              "inputTypes": [
+                "Tool"
+              ],
+              "type": "other"
+            },
+            "sourceHandle": {
+              "dataType": "GoogleSearchAPICore",
+              "id": "GoogleSearchAPICore-YlfSJ",
+              "name": "component_as_tool",
+              "output_types": [
+                "Tool"
+              ]
+            }
+          },
+          "id": "xy-edge__GoogleSearchAPICore-YlfSJ{ÅdataTypeÅ:ÅGoogleSearchAPICoreÅ,ÅidÅ:ÅGoogleSearchAPICore-YlfSJÅ,ÅnameÅ:Åcomponent_as_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}-Agent-bgdOO{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}",
+          "animated": false,
+          "className": "",
+          "selected": false
+        },
+        {
+          "source": "Agent-bgdOO",
+          "sourceHandle": "{ÅdataTypeÅ:ÅAgentÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅnameÅ:ÅresponseÅ,Åoutput_typesÅ:[ÅMessageÅ]}",
+          "target": "ChatOutput-B1dVh",
+          "targetHandle": "{ÅfieldNameÅ:Åinput_valueÅ,ÅidÅ:ÅChatOutput-B1dVhÅ,ÅinputTypesÅ:[ÅDataÅ,ÅDataFrameÅ,ÅMessageÅ],ÅtypeÅ:ÅstrÅ}",
+          "data": {
+            "targetHandle": {
+              "fieldName": "input_value",
+              "id": "ChatOutput-B1dVh",
+              "inputTypes": [
+                "Data",
+                "DataFrame",
+                "Message"
+              ],
+              "type": "str"
+            },
+            "sourceHandle": {
+              "dataType": "Agent",
+              "id": "Agent-bgdOO",
+              "name": "response",
+              "output_types": [
+                "Message"
+              ]
+            }
+          },
+          "id": "xy-edge__Agent-bgdOO{ÅdataTypeÅ:ÅAgentÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅnameÅ:ÅresponseÅ,Åoutput_typesÅ:[ÅMessageÅ]}-ChatOutput-B1dVh{ÅfieldNameÅ:Åinput_valueÅ,ÅidÅ:ÅChatOutput-B1dVhÅ,ÅinputTypesÅ:[ÅDataÅ,ÅDataFrameÅ,ÅMessageÅ],ÅtypeÅ:ÅstrÅ}",
+          "animated": false,
+          "className": "",
+          "selected": false
+        },
+        {
+          "source": "NotionDatabaseProperties-UuHFD",
+          "sourceHandle": "{ÅdataTypeÅ:ÅNotionDatabasePropertiesÅ,ÅidÅ:ÅNotionDatabaseProperties-UuHFDÅ,ÅnameÅ:Åapi_build_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}",
+          "target": "Agent-bgdOO",
+          "targetHandle": "{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}",
+          "data": {
+            "targetHandle": {
+              "fieldName": "tools",
+              "id": "Agent-bgdOO",
+              "inputTypes": [
+                "Tool"
+              ],
+              "type": "other"
+            },
+            "sourceHandle": {
+              "dataType": "NotionDatabaseProperties",
+              "id": "NotionDatabaseProperties-UuHFD",
+              "name": "api_build_tool",
+              "output_types": [
+                "Tool"
+              ]
+            }
+          },
+          "id": "xy-edge__NotionDatabaseProperties-UuHFD{ÅdataTypeÅ:ÅNotionDatabasePropertiesÅ,ÅidÅ:ÅNotionDatabaseProperties-UuHFDÅ,ÅnameÅ:Åapi_build_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}-Agent-bgdOO{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}"
+        },
+        {
+          "source": "NotionPageContent-ZE8Fc",
+          "sourceHandle": "{ÅdataTypeÅ:ÅNotionPageContentÅ,ÅidÅ:ÅNotionPageContent-ZE8FcÅ,ÅnameÅ:Åapi_build_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}",
+          "target": "Agent-bgdOO",
+          "targetHandle": "{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}",
+          "data": {
+            "targetHandle": {
+              "fieldName": "tools",
+              "id": "Agent-bgdOO",
+              "inputTypes": [
+                "Tool"
+              ],
+              "type": "other"
+            },
+            "sourceHandle": {
+              "dataType": "NotionPageContent",
+              "id": "NotionPageContent-ZE8Fc",
+              "name": "api_build_tool",
+              "output_types": [
+                "Tool"
+              ]
+            }
+          },
+          "id": "xy-edge__NotionPageContent-ZE8Fc{ÅdataTypeÅ:ÅNotionPageContentÅ,ÅidÅ:ÅNotionPageContent-ZE8FcÅ,ÅnameÅ:Åapi_build_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}-Agent-bgdOO{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}"
+        },
+        {
+          "source": "NotionSearch-G9hif",
+          "sourceHandle": "{ÅdataTypeÅ:ÅNotionSearchÅ,ÅidÅ:ÅNotionSearch-G9hifÅ,ÅnameÅ:Åapi_build_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}",
+          "target": "Agent-bgdOO",
+          "targetHandle": "{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}",
+          "data": {
+            "targetHandle": {
+              "fieldName": "tools",
+              "id": "Agent-bgdOO",
+              "inputTypes": [
+                "Tool"
+              ],
+              "type": "other"
+            },
+            "sourceHandle": {
+              "dataType": "NotionSearch",
+              "id": "NotionSearch-G9hif",
+              "name": "api_build_tool",
+              "output_types": [
+                "Tool"
+              ]
+            }
+          },
+          "id": "xy-edge__NotionSearch-G9hif{ÅdataTypeÅ:ÅNotionSearchÅ,ÅidÅ:ÅNotionSearch-G9hifÅ,ÅnameÅ:Åapi_build_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}-Agent-bgdOO{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}"
+        },
+        {
+          "source": "NotionListPages-DMnus",
+          "sourceHandle": "{ÅdataTypeÅ:ÅNotionListPagesÅ,ÅidÅ:ÅNotionListPages-DMnusÅ,ÅnameÅ:Åapi_build_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}",
+          "target": "Agent-bgdOO",
+          "targetHandle": "{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}",
+          "data": {
+            "targetHandle": {
+              "fieldName": "tools",
+              "id": "Agent-bgdOO",
+              "inputTypes": [
+                "Tool"
+              ],
+              "type": "other"
+            },
+            "sourceHandle": {
+              "dataType": "NotionListPages",
+              "id": "NotionListPages-DMnus",
+              "name": "api_build_tool",
+              "output_types": [
+                "Tool"
+              ]
+            }
+          },
+          "id": "xy-edge__NotionListPages-DMnus{ÅdataTypeÅ:ÅNotionListPagesÅ,ÅidÅ:ÅNotionListPages-DMnusÅ,ÅnameÅ:Åapi_build_toolÅ,Åoutput_typesÅ:[ÅToolÅ]}-Agent-bgdOO{ÅfieldNameÅ:ÅtoolsÅ,ÅidÅ:ÅAgent-bgdOOÅ,ÅinputTypesÅ:[ÅToolÅ],ÅtypeÅ:ÅotherÅ}"
+        }
+      ],
+      "viewport": {
+        "x": -384.03461496770205,
+        "y": 126.40992944353826,
+        "zoom": 0.391738525317009
+      }
+    },
+    "description": "A simple but powerful agent of kindness.",
+    "name": "Faya Agent",
+    "last_tested_version": "1.2.0",
+    "endpoint_name": null,
+    "is_component": false
+  }
