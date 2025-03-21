@@ -1,0 +1,24 @@
+{
+  "$schema": "https://backboard.railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "nixpacksPlan": {
+      "providers": ["python"],
+      "phases": {
+        "setup": {
+          "nixPkgs": ["conda", "pip"]
+        },
+        "install": {
+          "cmds": [
+            "conda create -n rag-app python=3.10",
+            "conda activate rag-app",
+            "pip install requirements.txt"
+          ]
+        }
+      }
+    }
+  },
+  "deploy": {
+    "startCommand": "streamlit run main.py"
+  }
+}
