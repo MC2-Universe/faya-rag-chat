@@ -6,14 +6,10 @@
       "providers": ["python"],
       "phases": {
         "setup": {
-          "nixPkgs": ["conda", "pip"]
+          "nixPkgs": ["...", "conda"]
         },
         "install": {
-          "cmds": [
-            "conda create -n rag-app python=3.10",
-            "conda activate rag-app",
-            "pip install requirements.txt"
-          ]
+          "cmds": ["pip install requirements.txt"]
         }
       }
     }
