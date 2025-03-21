@@ -1,13 +1,13 @@
 {
-    "$schema": "https://railway.com/railway.schema.json",
-    "build": {
-      "nixpacksPlan": {
-        "phases": {
-          "install": {
-            "dependsOn": ["setup"],
-            "cmds": ["conda create -n faya-app python=3.10", "conda activate faya-app", "pip install langflow streamlit langchain-community"]
-          }
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "nixpacksPlan": {
+      "phases": {
+        "install": {
+          "dependsOn": ["setup"],
+          "cmds": ["pip install langflow streamlit langchain-community"]
         }
       }
     }
   }
+}
