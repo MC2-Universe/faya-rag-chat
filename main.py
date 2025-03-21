@@ -6,7 +6,9 @@ import json
 from argparse import RawTextHelpFormatter
 import requests
 import warnings
+from streamlit.logger import get_logger
 
+LOGGER = get_logger(__name__)
 BASE_API_URL = "https://langflowailangflowlatest-production-ce41.up.railway.app"
 FLOW_ID = "e03c7cfc-75c0-4963-85ba-e5d66055abad"
 ENDPOINT = ""  # You can set a specific endpoint name in the flow settings

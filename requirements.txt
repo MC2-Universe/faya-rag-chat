@@ -1,3 +1,7 @@
 langflow
 streamlit
 langchain-community
+altair
+numpy
+pandas
+pydeck
